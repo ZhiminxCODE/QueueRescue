@@ -46,6 +46,12 @@ Confirm the account and identity yourself. Copy `infra/aws/terraform.tfvars.exam
 
 Browser-based `aws login` requires AWS CLI 2.32.0 or newer. Update an older CLI before using that path; IAM Identity Center users may use the supported SSO flow. No access keys need to be shared in chat.
 
+Check `aws --version` before starting. If a newer CLI has been prepared in the ignored project tools folder, run `.data/bin/aws --version` and use `.data/bin/aws` in place of `aws` for these commands. This does not change the system CLI or your shell configuration. See the [official installation instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) for a normal installation or update.
+
+For the console-based login flow, the non-root IAM user or role needs `SignInLocalDevelopmentAccess`, in addition to its separately reviewed deployment permissions. That policy enables temporary local sign-in; it does not grant permission to deploy the stack. If you only have the account's root login, establish a non-root development identity before continuing. See [AWS's browser login prerequisites](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html). Do not approve a root session for this project.
+
+This developer login is separate from `python -m tools.aws_console login`, which signs an application Operator or Approver into Cognito after deployment. The next account milestone is to verify the developer identity and cost eligibility, then review a Terraform plan. Preparing a plan does not deploy resources.
+
 Build the Lambda package, then prepare a saved plan:
 
 ```sh
