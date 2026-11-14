@@ -5,3 +5,15 @@ __pycache__/
 *.pyc
 .DS_Store
 .venv/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.auto.tfvars
+terraform.tfvars
+crash.log
+infra/aws/.build/
+.env
+.env.*
+!.env.example
+
