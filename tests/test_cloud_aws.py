@@ -38,6 +38,19 @@ class AwsAdapterTests(CloudFixture):
         self.assertEqual(first['indexed'], second['indexed'])
         self.assertEqual(len(self.repo.query(self.repo.queue_pk, 'MSG#')[0]), 1)
 
+    def test_collector_recovers_after_snapshot_commit_but_before_index_commit(self):
+        self.put_dlq()
+        with patch.object(self.repo, 'commit', side_effect=RuntimeError('Interrupted before index commit')):
+            with self.assertRaises(RuntimeError):
+                collect(self.repo)
+        self.assertEqual(len(self.repo.query(self.repo.queue_pk, 'MSG#')[0]), 0)
+        result = collect(self.repo)
+        self.assertEqual(len(result['indexed']), 1)
+        row = self.repo.query(self.repo.queue_pk, 'MSG#')[0][0]
+        snapshot = self.repo.evidence(row['evidenceKey'], row['evidenceChecksum'])
+        self.assertEqual(snapshot['body'], self.body)
+        self.assertEqual(snapshot['systemAttributes']['ApproximateReceiveCount'], '1')
+
     def test_binary_attributes_survive_encrypted_snapshot(self):
         self.put_dlq(attributes={'binary':{'DataType':'Binary','BinaryValue':b'\x00\xff'}})
         collect(self.repo)

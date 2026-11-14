@@ -142,8 +142,14 @@ class Repository:
         except ClientError as error:
             if error.response["Error"]["Code"] not in {"PreconditionFailed", "412"}:
                 raise
-            if self.evidence(key) != snapshot:
+            existing = self.evidence(key)
+            stable_fields = ["body", "messageAttributes", "originalMessageId", "queueUrl", "checksum"]
+            if any(existing.get(field) != snapshot.get(field) for field in stable_fields):
                 raise CloudProblem(409, "Existing immutable evidence does not match") from error
+            # Receive counts change after a crash between S3 and index commits.
+            # Preserve the first observed system attributes and bind the index
+            # to that original envelope, rather than overwriting its evidence.
+            body = json.dumps(existing, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=binary).encode()
         return sha(body)
 
     def evidence(self, key, expected_checksum=None):
