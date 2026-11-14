@@ -105,12 +105,14 @@ class Settings:
     state_machine_arn: str
     consumer_version: str = "shipment-demo-v1"
     retention_days: int = 7
+    collector_arn: str = ""
 
     @classmethod
     def from_env(cls):
         names = ["region", "account_id", "ledger_table", "business_table", "audit_table", "evidence_bucket", "kms_key_arn", "source_queue_url", "dlq_url", "replay_queue_url", "verifier_arn", "state_machine_arn"]
         values = {name: os.environ["QR_" + name.upper()] for name in names}
-        settings = cls(**values)
+        settings = cls(**values, collector_arn=os.environ.get("QR_COLLECTOR_ARN", ""),
+                       consumer_version=os.environ.get("QR_CONSUMER_VERSION", "shipment-demo-v1"))
         if not re.fullmatch(r"\d{12}", settings.account_id):
             raise ValueError("Invalid target AWS account")
         for url in [settings.source_queue_url, settings.dlq_url, settings.replay_queue_url]:

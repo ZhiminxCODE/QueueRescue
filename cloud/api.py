@@ -6,7 +6,6 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from backend.service import mask
 from cloud.aws import runtime
-from cloud.collector import collect
 from cloud.contracts import CloudProblem, actor_from_gateway, cursor_decode, cursor_encode, encode, request_identity
 from cloud.recovery import approve_plan, control_job, create_plan, ensure_execution, job_detail, required, start_job, verify_job
 
@@ -75,7 +74,13 @@ def route(repo, event):
     if path == "/collections":
         if data.get("acknowledgeVisibilityChange") is not True:
             raise CloudProblem(400, "Explicitly acknowledge collection visibility changes")
-        result = collect(repo)
+        if not repo.settings.collector_arn:
+            raise CloudProblem(503, "Collector Lambda is not configured")
+        invoked = repo.clients.verifier.invoke(FunctionName=repo.settings.collector_arn, InvocationType="RequestResponse",
+            Payload=encode({"acknowledgeVisibilityChange":True}).encode())
+        if invoked.get("FunctionError"):
+            raise CloudProblem(503, "Collector unavailable; retry with the same Idempotency-Key")
+        result = json.loads(invoked["Payload"].read())
         repo.commit([], actor["id"], "COLLECTION_REQUESTED", repo.queue_pk, request=request, response=result)
         return result
     if path == "/replay-plans":

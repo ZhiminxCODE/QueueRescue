@@ -54,3 +54,59 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build dashboard
         run: npm run build
+
+  aws:
+    name: Offline AWS adapters and recovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AWS_EC2_METADATA_DISABLED: 'true'
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: |
+            cloud/requirements.txt
+            requirements-aws-test.txt
+      - name: Install pinned AWS SDK and offline emulator
+        run: python -m pip install -r requirements-aws-test.txt
+      - name: Exercise real SDK request shapes against mocked AWS
+        run: python -m unittest discover -s tests -p 'test_cloud*.py' -v
+
+  infrastructure:
+    name: Terraform validation and mocked plans
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AWS_EC2_METADATA_DISABLED: 'true'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4
+        with:
+          terraform_version: 1.17.2
+          terraform_wrapper: false
+      - name: Package Lambda functions
+        run: python tools/package_aws.py
+      - name: Check infrastructure formatting
+        run: terraform -chdir=infra/aws fmt -check -recursive
+      - name: Initialize pinned provider without backend
+        run: terraform -chdir=infra/aws init -backend=false -input=false -lockfile=readonly
+      - name: Validate infrastructure schema
+        run: terraform -chdir=infra/aws validate -no-color
+      - name: Test sandbox safety with mocked AWS provider
+        run: terraform -chdir=infra/aws test -no-color
