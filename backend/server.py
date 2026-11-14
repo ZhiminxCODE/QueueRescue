@@ -2,6 +2,7 @@
 import argparse
 import json
 import mimetypes
+import math
 import secrets
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -9,6 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from backend.service import DESTINATION, QUEUE, Problem, Store, Worker, canonical, digest, require
+from backend.simulator import ShipmentConsumer
 
 ROOT = Path(__file__).resolve().parents[1]
 PERSONAS = {
@@ -218,14 +220,25 @@ def main():
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--db", default=str(ROOT / ".data" / "queuerescue.sqlite3"))
     parser.add_argument("--seed", type=int, default=1000)
+    parser.add_argument("--consumer-delay", type=float, default=.25, help="Delay before each synthetic delivery can be consumed (seconds)")
+    parser.add_argument("--consumer-failures", type=int, default=0, help="Injected failures per delivery before shipment creation")
+    parser.add_argument("--consumer-max-attempts", type=int, default=3)
+    parser.add_argument("--consumer-disabled", action="store_true", help="Leave accepted deliveries queued without processing them")
     args = parser.parse_args()
     if not 1 <= args.seed <= 100000:
         parser.error("--seed must be between 1 and 100000")
+    if not math.isfinite(args.consumer_delay) or args.consumer_delay < 0:
+        parser.error("--consumer-delay must be finite and non-negative")
+    if args.consumer_failures < 0 or args.consumer_max_attempts < 1:
+        parser.error("--consumer-failures must be non-negative and --consumer-max-attempts must be positive")
     Path(args.db).parent.mkdir(parents=True, exist_ok=True)
-    store = Store(args.db, args.seed)
+    store = Store(args.db, args.seed, consumer_delay=args.consumer_delay)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(store, args.port))
     worker = Worker(store)
+    consumer = ShipmentConsumer(store, transient_failures=args.consumer_failures, max_attempts=args.consumer_max_attempts)
     worker.start()
+    if not args.consumer_disabled:
+        consumer.start()
     print("QueueRescue local demo: http://localhost:" + str(args.port), flush=True)
     print("Synthetic data only. Demo personas are not production authentication.", flush=True)
     try:
@@ -234,7 +247,10 @@ def main():
         pass
     finally:
         worker.stopping.set()
+        consumer.stopping.set()
         worker.join(timeout=5)
+        if consumer.is_alive():
+            consumer.join(timeout=5)
         server.server_close()
         store.db.close()
 

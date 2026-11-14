@@ -26,6 +26,18 @@ python3 -m backend.server --db .data/demo-10k.sqlite3 --seed 10000 --port 8001
 
 The seed option applies only to an empty database. To restart the walkthrough with fresh data, stop the server and choose a new `--db` path.
 
+The replay sender and simulated shipment consumer run independently. By default, each accepted delivery waits at least 0.25 seconds before the consumer can create its shipment. Consumer completion still requires an explicit business-verification check to count as a recovery.
+
+To explore delayed processing, bounded consumer retries, or a stopped consumer:
+
+```sh
+python3 -m backend.server --db .data/delayed.sqlite3 --consumer-delay 5
+python3 -m backend.server --db .data/retries.sqlite3 --consumer-failures 2 --consumer-max-attempts 3
+python3 -m backend.server --db .data/stopped.sqlite3 --consumer-disabled
+```
+
+Injected consumer failures happen before the shipment effect, separately for each delivery. Retries use exponential backoff starting at 0.1 seconds and stop at the configured attempt limit. A failed consumer delivery stays unverified in the recovery job; it is never automatically replayed again. Restarting with the same database preserves pending work and retry counts. Acknowledging queue delivery and committing a shipment are separate transactions; consumer redelivery deduplicates using the stable business operation ID.
+
 ## Demo walkthrough
 
 1. Open **Failure inbox**. Filter by error, age, operation ID, or business outcome. Inspect an event for a masked payload, original identity, checksum, attributes, and simulated failure evidence.
@@ -34,7 +46,7 @@ The seed option applies only to an empty database. To restart the walkthrough wi
 4. Switch the top-right demo identity to **Approver / Morgan Lee**. Add a note and approve the exact plan hash. The API rejects self-approval, changed hashes, and expired plans.
 5. Switch back to **Operator**. Optionally enable **Simulate interruption after first send**, then start the approved recovery.
 6. In **Recovery jobs**, observe the persisted ledger. An injected interruption produces **PAUSED / UNCERTAIN**. Click **Reconcile outcomes**, then **Resume**. The uncertain message is not resent.
-7. When sending reaches **VERIFYING**, click **Verify outcomes**. Only confirmed business completions count as recoveries. Export the incident report and inspect **Audit trail**.
+7. When sending reaches **VERIFYING**, click **Verify outcomes**. If the consumer is still processing, the job becomes **PARTIAL / UNVERIFIED**. Check again after processing completes; late proof moves it to **COMPLETED**. Only confirmed business completions count as recoveries. Export the incident report and inspect **Audit trail**.
 
 To quickly test one eligible event, use operation `shipment:ORD-12345` in a new dry run. The default dataset has 824 warehouse timeouts, 162 invalid-schema events, and 14 already-shipped events. Initially 750 are eligible, 74 require review, 162 are blocked, and 14 are skipped.
 
@@ -82,7 +94,9 @@ npm run benchmark
 npm run build
 ```
 
-The tests cover duplicate request/start handling, unknown outcomes, malformed events, payload masking, snapshot/plan tampering, approval expiry, independent approval, role enforcement, allowlists, overlapping operation reservations, cancellation, pause, actual worker pacing, crash-after-send reconciliation, durable restart recovery, HTTP pagination, and audit integrity.
+The tests cover duplicate request/start handling, unknown outcomes, malformed events, payload masking, snapshot/plan tampering, approval expiry, independent approval, role enforcement, allowlists, overlapping operation reservations, cancellation, pause, actual worker pacing, crash-after-send reconciliation, durable restart recovery, HTTP pagination, and audit integrity. Async tests additionally cover delayed consumption, exponential retry backoff and exhaustion, poison deliveries, duplicate consumption, expired consumer leases, verifier outages, late completion, and independent sender/consumer threads.
+
+Two subprocess tests terminate a child with SIGKILL precisely after transport acceptance or shipment creation. They reopen the persisted database and prove reconciliation without a second send or duplicate shipment. These tests use temporary databases and never stop an application server or process outside the test. Clock-based tests advance simulated time instead of sleeping through lease expiry or retry backoff. Existing prototype databases receive an additive consumer-queue migration; completed historical shipments are not processed again.
 
 The benchmark indexes and plans 10,000 synthetic events in a temporary SQLite database and prints measured timings. It sends no messages and is **not** an AWS throughput, cost, or UI latency benchmark. The test suite binds an ephemeral loopback port for HTTP integration tests.
 
@@ -92,7 +106,8 @@ The benchmark indexes and plans 10,000 synthetic events in a temporary SQLite da
 
 ```text
 src/                   React dashboard, API client, responsive CSS
-backend/service.py     Recovery protocol, persistence, simulated transport/consumer
+backend/service.py     Recovery protocol, persistence, simulated transport
+backend/simulator.py   Independent shipment consumer, retries, leases, deduplication
 backend/server.py      Loopback HTTP API, demo sessions, static asset host
 backend/benchmark.py   Reproducible 10,000-event index/plan benchmark
 tests/                 Safety, persistence, and HTTP integration tests
@@ -102,7 +117,7 @@ tests/                 Safety, persistence, and HTTP integration tests
 
 Demo sessions deliberately let anyone on this local machine select a role. They are in-memory, expire after eight hours, and are invalidated by server restarts. This is not production authentication; do not expose the local server publicly. Snapshots and simulated payloads are plaintext in the local database. Audit triggers/hash chains are useful local integrity checks, not independent tamper-proof storage against a database administrator.
 
-The simulated consumer completes synchronously at transport acceptance. Real workers require asynchronous verification, stale-status policy, network timeouts/backoff, and idempotency enforced inside the business service. A unique local shipment key demonstrates that contract; it does not prove universal exactly-once behavior. Evidence is simulated; the app does not invent real CloudWatch or trace links.
+The simulated consumer processes accepted deliveries asynchronously and commits shipment effects separately from queue acknowledgment. A unique local shipment key demonstrates business idempotency; it does not prove universal exactly-once behavior. The verifier supports an injected status adapter for outage/invalid-response tests and conservatively returns UNKNOWN on connection failures or timeouts. Real remote adapters still need authenticated endpoints, bounded network timeouts, freshness policy, and customer-specific idempotency contracts. Evidence is simulated; the app does not invent real CloudWatch or trace links.
 
 The AWS phase should replace local persistence and transport with DynamoDB conditional writes, encrypted S3 evidence, SQS, Lambda workers, Step Functions execution, Cognito authorizers, scoped IAM/KMS, and Terraform. It also needs opt-in collection with explicit SQS receive visibility behavior, real CloudWatch correlation, source retention alarms, adapter credentials in Secrets Manager, lease expiry across distributed workers, retry/circuit-breaker controls, budgets, protected audit exports, and an explicit source finalization process. Infrastructure has intentionally not been provisioned by this prototype.
 

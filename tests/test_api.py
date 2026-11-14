@@ -9,12 +9,13 @@ from http.server import ThreadingHTTPServer
 
 from backend.server import make_handler
 from backend.service import Store, Worker
+from backend.simulator import ShipmentConsumer
 
 
 class ApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.store = Store(seed_count=100)
+        cls.store = Store(seed_count=100, consumer_delay=0)
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(cls.store, 0))
         cls.port = cls.server.server_port
         cls.server.RequestHandlerClass = make_handler(cls.store, cls.port)
@@ -123,6 +124,12 @@ class ApiTests(unittest.TestCase):
             deliveries = self.store.read("SELECT created_at FROM deliveries ORDER BY created_at")
             self.assertEqual(len(deliveries), 10)
             self.assertTrue(all(b["created_at"] - a["created_at"] >= .19 for a, b in zip(deliveries, deliveries[1:])))
+            _, verified = self.post("/verifications", {"jobId": job["id"]}, operator)
+            self.assertEqual(verified["state"], "PARTIAL")
+            self.assertEqual(verified["counts"]["UNVERIFIED"], 10)
+            consumer = ShipmentConsumer(self.store)
+            while consumer.tick():
+                pass
             _, verified = self.post("/verifications", {"jobId": job["id"]}, operator)
             self.assertEqual(verified["state"], "COMPLETED")
             self.assertEqual(verified["counts"]["VERIFIED"], 10)

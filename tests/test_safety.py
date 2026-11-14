@@ -6,6 +6,7 @@ import time
 import unittest
 
 from backend.service import DESTINATION, Problem, Store, canonical, digest, mask
+from backend.simulator import ShipmentConsumer
 
 OPERATOR = {"name": "Alex Chen", "role": "Operator"}
 APPROVER = {"name": "Morgan Lee", "role": "Approver"}
@@ -14,7 +15,8 @@ VIEWER = {"name": "Sam Rivera", "role": "Viewer"}
 
 class RecoverySafetyTests(unittest.TestCase):
     def setUp(self):
-        self.store = Store(seed_count=100)
+        self.store = Store(seed_count=100, consumer_delay=0)
+        self.consumer = ShipmentConsumer(self.store)
 
     def tearDown(self):
         self.store.db.close()
@@ -43,6 +45,8 @@ class RecoverySafetyTests(unittest.TestCase):
             if self.store.job(identifier)["state"] != "RUNNING":
                 break
             self.store.tick(identifier)
+            while self.consumer.tick():
+                pass
 
     def test_classification_excludes_unknown_complete_and_invalid(self):
         plan = self.make_plan()
@@ -79,7 +83,6 @@ class RecoverySafetyTests(unittest.TestCase):
     def test_sent_without_business_proof_remains_unverified(self):
         job = self.ready_job(filters={"search": "shipment:ORD-12010"})
         self.store.tick(job["id"])
-        self.mutation(lambda: self.store.db.execute("DELETE FROM shipments WHERE operation_id='shipment:ORD-12010'"))
         self.store.tick(job["id"])
         result = self.verify(job["id"])
         self.assertEqual(result["state"], "PARTIAL")
@@ -90,11 +93,10 @@ class RecoverySafetyTests(unittest.TestCase):
     def test_later_business_proof_completes_a_partial_job(self):
         job = self.ready_job(filters={"search": "shipment:ORD-12010"})
         self.store.tick(job["id"])
-        self.mutation(lambda: self.store.db.execute("DELETE FROM shipments WHERE operation_id='shipment:ORD-12010'"))
         self.store.tick(job["id"])
         self.assertEqual(self.verify(job["id"])["state"], "PARTIAL")
 
-        self.mutation(lambda: self.store.db.execute("INSERT INTO shipments VALUES (?,?,?)", ("shipment:ORD-12010", "late-proof", time.time())))
+        self.assertTrue(self.consumer.tick())
         result = self.verify(job["id"])
         self.assertEqual(result["state"], "COMPLETED")
         self.assertEqual(result["counts"]["VERIFIED"], 1)
@@ -107,7 +109,6 @@ class RecoverySafetyTests(unittest.TestCase):
     def test_repeated_checks_preserve_unverified_delivery_state(self):
         job = self.ready_job(filters={"search": "shipment:ORD-12010"})
         self.store.tick(job["id"])
-        self.mutation(lambda: self.store.db.execute("DELETE FROM shipments WHERE operation_id='shipment:ORD-12010'"))
         self.store.tick(job["id"])
         for _ in range(2):
             result = self.verify(job["id"])
@@ -119,6 +120,7 @@ class RecoverySafetyTests(unittest.TestCase):
         job = self.ready_job(filters={"search": "shipment:ORD-12010"})
         self.store.tick(job["id"])
         self.mutation(lambda: self.store.control(OPERATOR, job["id"], "cancel", {}))
+        self.assertTrue(self.consumer.tick())
         result = self.verify(job["id"])
         self.assertEqual(result["state"], "CANCELLED")
         self.assertEqual(result["counts"]["VERIFIED"], 1)
@@ -131,6 +133,7 @@ class RecoverySafetyTests(unittest.TestCase):
         self.assertEqual(paused["counts"]["UNCERTAIN"], 1)
         with self.assertRaises(Problem):
             self.mutation(lambda: self.store.control(OPERATOR, job["id"], "resume", {}))
+        self.assertTrue(self.consumer.tick())
         self.assertEqual(self.verify(job["id"])["counts"]["VERIFIED"], 1)
         self.mutation(lambda: self.store.control(OPERATOR, job["id"], "resume", {}))
         self.drain(job["id"])
@@ -142,7 +145,7 @@ class RecoverySafetyTests(unittest.TestCase):
         job = self.ready_job(True)
         self.store.tick(job["id"])
         uncertain = self.store.read("SELECT * FROM attempts WHERE state='UNCERTAIN'")[0]
-        self.mutation(lambda: self.store.db.execute("DELETE FROM shipments WHERE operation_id=?", (uncertain["operation_id"],)))
+        self.mutation(lambda: self.store.db.execute("UPDATE consumer_work SET available_at=?", (time.time() + 3600,)))
         self.mutation(lambda: self.store.db.execute("UPDATE messages SET outcome='UNKNOWN' WHERE operation_id=?", (uncertain["operation_id"],)))
         self.assertEqual(self.verify(job["id"])["counts"]["REVIEW"], 1)
         self.mutation(lambda: self.store.control(OPERATOR, job["id"], "resume", {}))
@@ -164,6 +167,7 @@ class RecoverySafetyTests(unittest.TestCase):
         self.store.tick(job["id"])
         self.mutation(lambda: self.store.control(OPERATOR, job["id"], "cancel", {}))
         self.store.tick(job["id"])
+        self.assertTrue(self.consumer.tick())
         result = self.verify(job["id"])
         self.assertEqual(result["state"], "CANCELLED")
         self.assertEqual(result["counts"]["CANCELLED"], 74)
@@ -301,6 +305,7 @@ class RecoverySafetyTests(unittest.TestCase):
     def test_complete_filter_includes_newly_verified_business_outcomes(self):
         job = self.ready_job(filters={"search": "shipment:ORD-12010"})
         self.store.tick(job["id"])
+        self.assertTrue(self.consumer.tick())
         rows = self.store.selection({"outcome": "COMPLETE"})
         self.assertIn("shipment:ORD-12010", [r["operation_id"] for r in rows])
 

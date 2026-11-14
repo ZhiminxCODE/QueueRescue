@@ -5,6 +5,7 @@ business verifier are deliberately simulated; this module never calls AWS.
 """
 import hashlib
 import json
+import math
 import re
 import sqlite3
 import threading
@@ -58,7 +59,11 @@ def mask(value):
 
 
 class Store:
-    def __init__(self, path=":memory:", seed_count=1000):
+    def __init__(self, path=":memory:", seed_count=1000, consumer_delay=.25, status_adapter=None):
+        if not math.isfinite(consumer_delay) or consumer_delay < 0:
+            raise ValueError("Consumer delay must be a finite non-negative number")
+        self.consumer_delay = consumer_delay
+        self.status_adapter = status_adapter
         self.lock = threading.RLock()
         self.db = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
         self.db.row_factory = sqlite3.Row
@@ -95,6 +100,11 @@ class Store:
         CREATE TABLE IF NOT EXISTS shipments (
           operation_id TEXT PRIMARY KEY, shipment_id TEXT UNIQUE NOT NULL,
           created_at REAL NOT NULL);
+        CREATE TABLE IF NOT EXISTS consumer_work (
+          delivery_id TEXT PRIMARY KEY REFERENCES deliveries(id), state TEXT NOT NULL,
+          available_at REAL NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+          lease_token TEXT, lease_until REAL, last_error TEXT, completed_at REAL);
+        CREATE INDEX IF NOT EXISTS consumer_pending ON consumer_work(state, available_at);
         CREATE TABLE IF NOT EXISTS audit (
           sequence INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, actor TEXT NOT NULL,
           role TEXT NOT NULL, action TEXT NOT NULL, resource TEXT NOT NULL,
@@ -109,6 +119,12 @@ class Store:
         """)
         if not self.db.execute("SELECT 1 FROM messages LIMIT 1").fetchone():
             self.seed(seed_count)
+        # Additive migration: existing delivered messages with business proof
+        # are already consumed; only unprocessed historical deliveries are queued.
+        with self.transaction():
+            self.db.execute("""INSERT OR IGNORE INTO consumer_work(delivery_id,state,available_at)
+                SELECT id, CASE WHEN EXISTS(SELECT 1 FROM shipments WHERE shipments.operation_id=deliveries.operation_id)
+                THEN 'COMPLETE' ELSE 'PENDING' END, created_at FROM deliveries""")
         self.recover()
 
     @contextmanager
@@ -229,6 +245,12 @@ class Store:
         return "REVIEW", "Business outcome is " + outcome + "; automatic replay blocked"
 
     def outcome(self, operation):
+        if self.status_adapter is not None:
+            try:
+                result = self.status_adapter(operation)
+            except (TimeoutError, ConnectionError, OSError):
+                return "UNKNOWN"
+            return result if isinstance(result, str) and result in {"COMPLETE", "NOT_STARTED", "IN_PROGRESS", "UNKNOWN"} else "UNKNOWN"
         if self.read("SELECT 1 FROM shipments WHERE operation_id=?", (operation,)):
             return "COMPLETE"
         rows = self.read("SELECT outcome FROM messages WHERE operation_id=? LIMIT 1", (operation,))
@@ -360,7 +382,7 @@ class Store:
         self.audit(actor, "JOB_" + action.upper(), identifier, {"reason": data.get("reason", action)})
         return self.job(identifier)
 
-    def tick(self, identifier):
+    def tick(self, identifier, after_send=None):
         """Schedule at most one message. Caller paces ticks using the approved rate."""
         worker = {"name": "replay-worker", "role": "System"}
         with self.transaction():
@@ -399,9 +421,13 @@ class Store:
                 return
             attrs = json.loads(message["attributes"])
             attrs.update({"replayJobId": identifier, "replayAttemptId": attempt["id"], "operationId": attempt["operation_id"]})
-            self.db.execute("INSERT INTO deliveries VALUES (?,?,?,?,?,?)", (uid("delivery"), attempt["id"], attempt["operation_id"], message["body"], canonical(attrs), time.time()))
-            # The simulated consumer owns the UNIQUE operation identity contract.
-            self.db.execute("INSERT OR IGNORE INTO shipments VALUES (?,?,?)", (attempt["operation_id"], uid("shp"), time.time()))
+            delivery_id = uid("delivery")
+            self.db.execute("INSERT INTO deliveries VALUES (?,?,?,?,?,?)", (delivery_id, attempt["id"], attempt["operation_id"], message["body"], canonical(attrs), time.time()))
+            self.db.execute("INSERT INTO consumer_work(delivery_id,state,available_at) VALUES (?,'PENDING',?)", (delivery_id, time.time() + self.consumer_delay))
+        # Test hook at the real durable boundary; a child process can be killed
+        # here to prove startup recovery without running a graceful shutdown.
+        if after_send is not None:
+            after_send()
         with self.transaction():
             job = self.one("jobs", identifier)
             if job["fault"] and not job["fault_used"]:
