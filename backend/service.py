@@ -417,14 +417,19 @@ class Store:
         job = self.job(identifier)
         for attempt in self.read("SELECT * FROM attempts WHERE job_id=? AND state IN ('SENT','UNCERTAIN','UNVERIFIED','REVIEW')", (identifier,)):
             outcome = self.outcome(attempt["operation_id"])
-            state = "VERIFIED" if outcome == "COMPLETE" else "UNVERIFIED" if attempt["state"] == "SENT" else "REVIEW"
+            state = "VERIFIED" if outcome == "COMPLETE" else "UNVERIFIED" if attempt["state"] in {"SENT", "UNVERIFIED"} else "REVIEW"
             self.db.execute("UPDATE attempts SET state=?,verified_at=?,detail=? WHERE id=?", (state, time.time(), "Business adapter outcome: " + outcome, attempt["id"]))
             if state == "VERIFIED":
                 self.db.execute("DELETE FROM operation_locks WHERE operation_id=? AND job_id=?", (attempt["operation_id"], identifier))
         job = self.job(identifier)
-        if job["state"] == "VERIFYING":
-            target = "PARTIAL" if any(job["counts"][s] for s in ["UNCERTAIN", "REVIEW", "UNVERIFIED", "FAILED"]) else "COMPLETED"
-            self.db.execute("UPDATE jobs SET state=?,updated_at=? WHERE id=?", (target, time.time(), identifier))
+        # Late business proof can resolve a previously partial recovery. Operator
+        # controls remain authoritative: verification never resumes paused work
+        # or turns a cancelled/failed job into a completed one.
+        if job["state"] in {"VERIFYING", "PARTIAL"}:
+            unresolved = ["QUEUED", "LEASED", "SENT", "UNCERTAIN", "REVIEW", "UNVERIFIED", "FAILED", "CANCELLED"]
+            target = "PARTIAL" if any(job["counts"][s] for s in unresolved) else "COMPLETED"
+            if target != job["state"]:
+                self.db.execute("UPDATE jobs SET state=?,updated_at=? WHERE id=?", (target, time.time(), identifier))
         self.audit(actor, "OUTCOMES_VERIFIED", identifier, {"counts": self.job(identifier)["counts"]})
         return self.job(identifier)
 

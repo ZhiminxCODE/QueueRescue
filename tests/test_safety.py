@@ -87,6 +87,42 @@ class RecoverySafetyTests(unittest.TestCase):
         self.assertEqual(result["counts"]["VERIFIED"], 0)
         self.assertEqual(self.store.read("SELECT count(*) n FROM operation_locks")[0]["n"], 1)
 
+    def test_later_business_proof_completes_a_partial_job(self):
+        job = self.ready_job(filters={"search": "shipment:ORD-12010"})
+        self.store.tick(job["id"])
+        self.mutation(lambda: self.store.db.execute("DELETE FROM shipments WHERE operation_id='shipment:ORD-12010'"))
+        self.store.tick(job["id"])
+        self.assertEqual(self.verify(job["id"])["state"], "PARTIAL")
+
+        self.mutation(lambda: self.store.db.execute("INSERT INTO shipments VALUES (?,?,?)", ("shipment:ORD-12010", "late-proof", time.time())))
+        result = self.verify(job["id"])
+        self.assertEqual(result["state"], "COMPLETED")
+        self.assertEqual(result["counts"]["VERIFIED"], 1)
+        report = self.store.report(job["id"])
+        self.assertEqual(report["state"], "COMPLETED")
+        self.assertEqual(report["verificationCoverage"], 1)
+        self.assertEqual(report["unresolved"], 0)
+        self.assertEqual(self.store.read("SELECT count(*) n FROM operation_locks")[0]["n"], 0)
+
+    def test_repeated_checks_preserve_unverified_delivery_state(self):
+        job = self.ready_job(filters={"search": "shipment:ORD-12010"})
+        self.store.tick(job["id"])
+        self.mutation(lambda: self.store.db.execute("DELETE FROM shipments WHERE operation_id='shipment:ORD-12010'"))
+        self.store.tick(job["id"])
+        for _ in range(2):
+            result = self.verify(job["id"])
+            self.assertEqual(result["state"], "PARTIAL")
+            self.assertEqual(result["counts"]["UNVERIFIED"], 1)
+            self.assertEqual(result["counts"]["REVIEW"], 0)
+
+    def test_late_proof_does_not_uncancel_a_job(self):
+        job = self.ready_job(filters={"search": "shipment:ORD-12010"})
+        self.store.tick(job["id"])
+        self.mutation(lambda: self.store.control(OPERATOR, job["id"], "cancel", {}))
+        result = self.verify(job["id"])
+        self.assertEqual(result["state"], "CANCELLED")
+        self.assertEqual(result["counts"]["VERIFIED"], 1)
+
     def test_crash_after_send_is_reconciled_without_resend(self):
         job = self.ready_job(fault=True)
         self.store.tick(job["id"])
