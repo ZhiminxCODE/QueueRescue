@@ -7,7 +7,7 @@ locals {
     QR_BUSINESS_TABLE    = aws_dynamodb_table.data["business"].name
     QR_AUDIT_TABLE       = aws_dynamodb_table.data["audit"].name
     QR_EVIDENCE_BUCKET   = aws_s3_bucket.evidence.id
-    QR_KMS_KEY_ARN       = aws_kms_key.application.arn
+    QR_KMS_KEY_ARN       = local.kms_key_arn
     QR_SOURCE_QUEUE_URL  = aws_sqs_queue.queue["source"].url
     QR_DLQ_URL           = aws_sqs_queue.queue["source-dlq"].url
     QR_REPLAY_QUEUE_URL  = aws_sqs_queue.queue["replay"].url
@@ -54,14 +54,15 @@ resource "aws_iam_role_policy" "function" {
   for_each = local.handlers
   role     = aws_iam_role.function[each.key].id
   policy = jsonencode({ Version = "2012-10-17", Statement = concat(local.policies[each.key], [
-    { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.prefix}-${each.key}:*" },
-    { Effect = "Allow", Action = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"], Resource = aws_kms_key.application.arn }
+    { Effect = "Allow", Action = ["logs:CreateLogStream", "logs:PutLogEvents"], Resource = "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.prefix}-${each.key}:*" }
+    ], local.minimal ? [] : [
+    { Effect = "Allow", Action = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"], Resource = local.kms_key_arn }
   ]) })
 }
 resource "aws_cloudwatch_log_group" "function" {
   for_each          = local.handlers
   name              = "/aws/lambda/${local.prefix}-${each.key}"
-  retention_in_days = 7
+  retention_in_days = local.minimal ? 1 : 7
 }
 resource "aws_lambda_function" "function" {
   for_each                       = local.handlers
@@ -82,6 +83,7 @@ resource "aws_lambda_event_source_mapping" "shipment" {
   for_each                = toset(["source", "replay"])
   event_source_arn        = aws_sqs_queue.queue[each.key].arn
   function_name           = aws_lambda_function.function["consumer"].arn
+  enabled                 = var.consumers_enabled
   batch_size              = 10
   function_response_types = ["ReportBatchItemFailures"]
   scaling_config { maximum_concurrency = 2 }

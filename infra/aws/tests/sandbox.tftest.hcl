@@ -36,14 +36,21 @@ mock_provider "aws" {
 }
 
 variables {
-  aws_account_id = "123456789012"
-  aws_profile    = null
+  aws_account_id         = "123456789012"
+  aws_profile            = null
+  aws_region             = "us-east-1"
+  cost_profile           = "standard"
+  protect_data           = true
+  allow_destroy_evidence = false
+  consumers_enabled      = true
+  replay_enabled         = true
+  budget_alert_email     = ""
 }
 
 run "safe_sandbox_plan" {
   command = plan
   assert {
-    condition     = alltrue([for queue in aws_sqs_queue.queue : !queue.fifo_queue && queue.kms_master_key_id == aws_kms_key.application.arn])
+    condition     = alltrue([for queue in aws_sqs_queue.queue : !queue.fifo_queue && queue.kms_master_key_id == aws_kms_key.application[0].arn])
     error_message = "Every queue must be standard and KMS encrypted."
   }
   assert {
@@ -86,6 +93,49 @@ run "replay_kill_switch" {
   assert {
     condition     = aws_lambda_function.function["replay"].reserved_concurrent_executions == 0
     error_message = "Disabling replay must prevent new replay worker invocations."
+  }
+}
+
+run "minimal_profile_keeps_encryption_without_fixed_cost_extras" {
+  command = plan
+  variables {
+    cost_profile       = "minimal"
+    consumers_enabled  = false
+    replay_enabled     = false
+    budget_alert_email = "budget@example.com"
+    monthly_budget_usd = 0.01
+  }
+  assert {
+    condition     = length(aws_kms_key.application) == 0 && length(aws_kms_alias.application) == 0
+    error_message = "Minimal mode must not create a customer-managed KMS key."
+  }
+  assert {
+    condition     = alltrue([for queue in aws_sqs_queue.queue : queue.sqs_managed_sse_enabled])
+    error_message = "Minimal queues must retain service-owned encryption."
+  }
+  assert {
+    condition     = sum([for table in aws_dynamodb_table.data : table.read_capacity]) == 15 && sum([for table in aws_dynamodb_table.data : table.write_capacity]) == 15
+    error_message = "Minimal DynamoDB capacity must stay fixed at 15 total reads and writes."
+  }
+  assert {
+    condition     = alltrue([for table in aws_dynamodb_table.data : table.billing_mode == "PROVISIONED" && !table.point_in_time_recovery[0].enabled && length(table.server_side_encryption) == 0])
+    error_message = "Minimal tables use default AWS-owned encryption without paid backup extras."
+  }
+  assert {
+    condition     = one(one(aws_s3_bucket_server_side_encryption_configuration.evidence.rule).apply_server_side_encryption_by_default).sse_algorithm == "AES256"
+    error_message = "Minimal evidence must retain SSE-S3 encryption."
+  }
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.backlog) + length(aws_cloudwatch_metric_alarm.function_errors) + length(aws_cloudwatch_metric_alarm.workflow_failure) == 0
+    error_message = "Minimal mode must not create metric alarms."
+  }
+  assert {
+    condition     = alltrue([for mapping in aws_lambda_event_source_mapping.shipment : !mapping.enabled]) && aws_lambda_function.function["replay"].reserved_concurrent_executions == 0
+    error_message = "The idle settings must stop polling and replay invocations."
+  }
+  assert {
+    condition     = anytrue([for notice in aws_budgets_budget.sandbox[0].notification : notice.threshold == 0 && notice.threshold_type == "ABSOLUTE_VALUE"])
+    error_message = "A zero-spend notification must be present."
   }
 }
 

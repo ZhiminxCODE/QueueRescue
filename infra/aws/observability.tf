@@ -8,7 +8,7 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = var.budget_alert_email
 }
 resource "aws_cloudwatch_metric_alarm" "backlog" {
-  for_each            = toset(["source-dlq", "replay-dlq"])
+  for_each            = local.minimal ? toset([]) : toset(["source-dlq", "replay-dlq"])
   alarm_name          = "${local.prefix}-${each.key}-backlog"
   namespace           = "AWS/SQS"
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -22,7 +22,7 @@ resource "aws_cloudwatch_metric_alarm" "backlog" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 resource "aws_cloudwatch_metric_alarm" "function_errors" {
-  for_each            = local.handlers
+  for_each            = local.minimal ? {} : local.handlers
   alarm_name          = "${local.prefix}-${each.key}-errors"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"
@@ -36,7 +36,7 @@ resource "aws_cloudwatch_metric_alarm" "function_errors" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 resource "aws_cloudwatch_metric_alarm" "workflow_failure" {
-  for_each            = toset(["ExecutionsFailed", "ExecutionsTimedOut"])
+  for_each            = local.minimal ? toset([]) : toset(["ExecutionsFailed", "ExecutionsTimedOut"])
   alarm_name          = "${local.prefix}-${each.key}"
   namespace           = "AWS/States"
   metric_name         = each.key
@@ -56,6 +56,16 @@ resource "aws_budgets_budget" "sandbox" {
   limit_amount = tostring(var.monthly_budget_usd)
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
+  cost_types {
+    include_credit = false
+  }
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 0
+    threshold_type             = "ABSOLUTE_VALUE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = [var.budget_alert_email]
+  }
   notification {
     comparison_operator        = "GREATER_THAN"
     threshold                  = 80

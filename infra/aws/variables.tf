@@ -27,6 +27,20 @@ variable "environment" {
     error_message = "This stack is restricted to development and test sandboxes."
   }
 }
+variable "cost_profile" {
+  description = "standard uses customer-managed keys/backups; minimal uses service-owned encryption and fixed small capacity. Neither guarantees Free Tier eligibility."
+  type        = string
+  default     = "standard"
+  validation {
+    condition     = contains(["standard", "minimal"], var.cost_profile)
+    error_message = "Choose standard or minimal."
+  }
+}
+variable "consumers_enabled" {
+  description = "Enable source/replay consumers during an explicit demo; false stops idle polling."
+  type        = bool
+  default     = true
+}
 variable "lambda_package" {
   description = "Deterministic deployment zip produced by tools/package_aws.py."
   type        = string

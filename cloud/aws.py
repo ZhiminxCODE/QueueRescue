@@ -135,10 +135,10 @@ class Repository:
                 return {"__sqs_binary__": base64.b64encode(value).decode()}
             raise TypeError("Unsupported evidence value")
         body = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=binary).encode()
+        encryption = {"ServerSideEncryption":"aws:kms", "SSEKMSKeyId":self.settings.kms_key_arn} if self.settings.kms_key_arn else {"ServerSideEncryption":"AES256"}
         try:
             self.clients.s3.put_object(Bucket=self.settings.evidence_bucket, Key=key, Body=body,
-                ContentType="application/json", ServerSideEncryption="aws:kms", SSEKMSKeyId=self.settings.kms_key_arn,
-                Metadata={"sha256": sha(body)}, IfNoneMatch="*")
+                ContentType="application/json", Metadata={"sha256": sha(body)}, IfNoneMatch="*", **encryption)
         except ClientError as error:
             if error.response["Error"]["Code"] not in {"PreconditionFailed", "412"}:
                 raise

@@ -3,22 +3,38 @@ locals {
   arn_prefix   = "arn:aws"
   function_arn = { for name in ["api", "collector", "replay", "consumer", "verifier"] : name => "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${local.prefix}-${name}" }
   workflow_arn = "arn:aws:states:${var.aws_region}:${var.aws_account_id}:stateMachine:${local.prefix}-recovery"
+  minimal      = var.cost_profile == "minimal"
+  kms_key_arn  = local.minimal ? "" : aws_kms_key.application[0].arn
+}
+
+# Preserve existing standard-profile key addresses after introducing optional keys.
+moved {
+  from = aws_kms_key.application
+  to   = aws_kms_key.application[0]
+}
+moved {
+  from = aws_kms_alias.application
+  to   = aws_kms_alias.application[0]
 }
 
 resource "aws_kms_key" "application" {
+  count                   = local.minimal ? 0 : 1
   description             = "QueueRescue sandbox evidence, queues, tables and logs"
   enable_key_rotation     = true
   deletion_window_in_days = 30
 }
 resource "aws_kms_alias" "application" {
+  count         = local.minimal ? 0 : 1
   name          = "alias/${local.prefix}"
-  target_key_id = aws_kms_key.application.key_id
+  target_key_id = aws_kms_key.application[0].key_id
 }
 
 resource "aws_dynamodb_table" "data" {
   for_each                    = toset(["ledger", "business", "audit"])
   name                        = "${local.prefix}-${each.key}"
-  billing_mode                = "PAY_PER_REQUEST"
+  billing_mode                = local.minimal ? "PROVISIONED" : "PAY_PER_REQUEST"
+  read_capacity               = local.minimal ? 5 : null
+  write_capacity              = local.minimal ? 5 : null
   hash_key                    = "pk"
   range_key                   = "sk"
   deletion_protection_enabled = var.protect_data
@@ -30,10 +46,13 @@ resource "aws_dynamodb_table" "data" {
     name = "sk"
     type = "S"
   }
-  point_in_time_recovery { enabled = true }
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.application.arn
+  point_in_time_recovery { enabled = !local.minimal }
+  dynamic "server_side_encryption" {
+    for_each = local.minimal ? [] : [1]
+    content {
+      enabled     = true
+      kms_key_arn = local.kms_key_arn
+    }
   }
   # Business and audit records must never disappear through evidence TTL.
   dynamic "ttl" {
@@ -64,10 +83,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "evidence" {
   bucket = aws_s3_bucket.evidence.id
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.application.arn
+      sse_algorithm     = local.minimal ? "AES256" : "aws:kms"
+      kms_master_key_id = local.minimal ? null : local.kms_key_arn
     }
-    bucket_key_enabled = true
+    bucket_key_enabled = !local.minimal
   }
 }
 resource "aws_s3_bucket_lifecycle_configuration" "evidence" {
@@ -84,11 +103,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "evidence" {
 }
 resource "aws_s3_bucket_policy" "evidence" {
   bucket = aws_s3_bucket.evidence.id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat([
     { Sid = "RequireTLS", Effect = "Deny", Principal = "*", Action = "s3:*", Resource = [aws_s3_bucket.evidence.arn, "${aws_s3_bucket.evidence.arn}/*"], Condition = { Bool = { "aws:SecureTransport" = "false" } } },
-    { Sid = "RequireKMS", Effect = "Deny", Principal = "*", Action = "s3:PutObject", Resource = "${aws_s3_bucket.evidence.arn}/*", Condition = { StringNotEquals = { "s3:x-amz-server-side-encryption" = "aws:kms" } } },
-    { Sid = "RequireCustomerKey", Effect = "Deny", Principal = "*", Action = "s3:PutObject", Resource = "${aws_s3_bucket.evidence.arn}/*", Condition = { StringNotEquals = { "s3:x-amz-server-side-encryption-aws-kms-key-id" = aws_kms_key.application.arn } } }
-  ] })
+    { Sid = "RequireEncryption", Effect = "Deny", Principal = "*", Action = "s3:PutObject", Resource = "${aws_s3_bucket.evidence.arn}/*", Condition = { StringNotEquals = { "s3:x-amz-server-side-encryption" = local.minimal ? "AES256" : "aws:kms" } } }
+    ], local.minimal ? [] : [
+    { Sid = "RequireCustomerKey", Effect = "Deny", Principal = "*", Action = "s3:PutObject", Resource = "${aws_s3_bucket.evidence.arn}/*", Condition = { StringNotEquals = { "s3:x-amz-server-side-encryption-aws-kms-key-id" = local.kms_key_arn } } }
+  ]) })
 }
 
 resource "aws_sqs_queue" "queue" {
@@ -97,7 +117,8 @@ resource "aws_sqs_queue" "queue" {
   fifo_queue                 = false
   visibility_timeout_seconds = 180
   message_retention_seconds  = endswith(each.key, "dlq") ? 1209600 : 345600
-  kms_master_key_id          = aws_kms_key.application.arn
+  kms_master_key_id          = local.minimal ? null : local.kms_key_arn
+  sqs_managed_sse_enabled    = local.minimal ? true : null
 }
 resource "aws_sqs_queue_redrive_policy" "source" {
   for_each  = toset(["source", "replay"])

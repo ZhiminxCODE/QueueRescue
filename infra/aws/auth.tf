@@ -1,5 +1,6 @@
 resource "aws_cognito_user_pool" "operators" {
   name                     = "${local.prefix}-operators"
+  user_pool_tier           = "LITE"
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
   deletion_protection      = var.protect_data ? "ACTIVE" : "INACTIVE"
@@ -98,7 +99,7 @@ resource "aws_apigatewayv2_route" "authenticated" {
 }
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/aws/apigateway/${local.prefix}"
-  retention_in_days = 7
+  retention_in_days = local.minimal ? 1 : 7
 }
 resource "aws_apigatewayv2_stage" "default" {
   api_id      = aws_apigatewayv2_api.api.id

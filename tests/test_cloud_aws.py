@@ -1,6 +1,7 @@
 import json
 import os
 import unittest
+from dataclasses import replace
 from unittest.mock import patch
 
 from cloud_support import AWS_TESTS_AVAILABLE, CloudFixture
@@ -58,6 +59,16 @@ class AwsAdapterTests(CloudFixture):
         self.assertEqual(self.repo.evidence(row['evidenceKey'])['messageAttributes']['binary']['BinaryValue'], b'\x00\xff')
         obj = self.clients.s3.head_object(Bucket=self.settings.evidence_bucket, Key=row['evidenceKey'])
         self.assertEqual(obj['ServerSideEncryption'], 'aws:kms')
+
+    def test_minimal_profile_keeps_evidence_encrypted_with_service_owned_keys(self):
+        self.repo.settings = replace(self.settings, kms_key_arn='')
+        self.put_dlq()
+        collect(self.repo)
+        row = self.repo.query(self.repo.queue_pk, 'MSG#')[0][0]
+        obj = self.clients.s3.head_object(Bucket=self.settings.evidence_bucket, Key=row['evidenceKey'])
+        self.assertEqual(obj['ServerSideEncryption'], 'AES256')
+        self.assertNotIn('SSEKMSKeyId', obj)
+        self.assertEqual(self.repo.evidence(row['evidenceKey'], row['evidenceChecksum'])['body'], self.body)
 
     def test_snapshot_tampering_is_detected(self):
         self.put_dlq()
