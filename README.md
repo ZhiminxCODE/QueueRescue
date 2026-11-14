@@ -86,6 +86,8 @@ The tests cover duplicate request/start handling, unknown outcomes, malformed ev
 
 The benchmark indexes and plans 10,000 synthetic events in a temporary SQLite database and prints measured timings. It sends no messages and is **not** an AWS throughput, cost, or UI latency benchmark. The test suite binds an ephemeral loopback port for HTTP integration tests.
 
+[GitHub Actions CI](https://github.com/ZhiminxCODE/QueueRescue/actions/workflows/ci.yml) runs on every push and pull request, and can also be started manually. It runs the backend suite on Python 3.10 and 3.13, the dry-run benchmark on Python 3.13, and a locked dependency install plus frontend build on Node 24. Official actions are pinned to commit revisions; the workflow has read-only repository permissions and requires no AWS credentials.
+
 ## Project layout
 
 ```text
