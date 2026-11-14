@@ -2,6 +2,8 @@
 
 The AWS backend and infrastructure are implemented and tested offline. This is not evidence of a successful deployment into your account. The existing React dashboard remains a local simulator; use the authenticated AWS console helper below for the first cloud demonstration. No account credentials have been requested or used during implementation.
 
+For a demo constrained by Free Tier eligibility, first read [cost controls](aws-cost-controls.md). A fresh sandbox can select `cost_profile="minimal"`, which keeps service-owned encryption while removing customer-managed KMS keys, paid backups, and metric alarms. Check the account's plan, credits, and shared usage before deployment; there is no guaranteed $0 cap. Leave `consumers_enabled=false` and `replay_enabled=false` until an intentional demo is ready.
+
 ## Inputs needed before deployment
 
 - A development AWS account ID and region. The default example region is `us-east-1`; the stack rejects production environment labels and unexpected account IDs.
@@ -11,6 +13,8 @@ The AWS backend and infrastructure are implemented and tested offline. This is n
 - Permission to create the listed sandbox resources and scoped IAM roles. Your account owner controls these permissions; no permanent vendor administrator key is required.
 
 The stack creates five Lambda functions, four standard SQS queues, three encrypted on-demand DynamoDB tables, a versioned encrypted S3 bucket, a customer-managed KMS key, a Cognito user pool/client/groups, an authenticated HTTP API, a Standard state machine, log groups, alarms, and an SNS topic. A budget and email subscription are created only when an alert email is configured. KMS, alarms, point-in-time recovery, storage, and usage can incur charges even with little traffic. There is no NAT gateway, ECS cluster, EC2 instance, or hosted frontend.
+
+That resource list describes the standard profile. The minimal profile uses fixed provisioned DynamoDB capacity, AWS-owned/service-owned encryption, and no customer-managed key, PITR, or metric alarms. It retains authenticated access, deletion protection, audit records, and controlled replay. Neither profile is a cost guarantee.
 
 ## Account-free build and checks
 
@@ -40,6 +44,8 @@ aws sts get-caller-identity --profile queuerescue-dev
 
 Confirm the account and identity yourself. Copy `infra/aws/terraform.tfvars.example` to `infra/aws/terraform.tfvars` and enter your account, profile, region, email, and budget threshold. The local values file, state, saved plans, and deployment outputs are ignored by Git. Keep Terraform state backed up securely; migrate it to an encrypted, access-controlled remote backend before collaboration or production use.
 
+Browser-based `aws login` requires AWS CLI 2.32.0 or newer. Update an older CLI before using that path; IAM Identity Center users may use the supported SSO flow. No access keys need to be shared in chat.
+
 Build the Lambda package, then prepare a saved plan:
 
 ```sh
@@ -67,6 +73,8 @@ Application approval compares Cognito `sub` identities. An Admin cannot self-app
 ## Seed a bounded synthetic incident
 
 The helper verifies the AWS account and rejects root before writing. Each seed run uses unique operation IDs and conditional initial business records. It never overwrites an existing shipment.
+
+If activity was disabled during initial setup, review and apply `consumers_enabled=true` and `replay_enabled=true` only after confirming the account's cost/Free Tier constraints. Disable the switches again after the bounded demonstration.
 
 ```sh
 .venv/bin/python -m tools.aws_console seed --profile queuerescue-dev --count 20

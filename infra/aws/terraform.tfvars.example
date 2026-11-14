@@ -3,10 +3,14 @@ aws_account_id    = "123456789012"
 aws_profile       = "queuerescue-dev"
 aws_region        = "us-east-1"
 environment       = "dev"
+cost_profile      = "standard"
+# For a fresh synthetic demo only, minimal removes fixed-cost extras; it is not a $0 guarantee.
+consumers_enabled = true
 budget_alert_email = ""
 monthly_budget_usd = 10
 # Set an email before deployment to receive budget and alarm notifications.
 # This is an account-wide alert, not a hard spending cap.
+# An additional zero-spend notification warns about metered costs before credits.
 protect_data          = true
 allow_destroy_evidence = false
 replay_enabled         = true

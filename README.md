@@ -2,6 +2,8 @@
 
 A working local implementation of the supplied technical prototype: investigate failed shipment events, create a selective recovery plan, obtain separate approval, replay at a bounded rate, and verify business outcomes.
 
+For the cloud demo, see [AWS cost controls](docs/aws-cost-controls.md). The optional minimal profile reduces fixed-cost features and preserves service-owned encryption, but Free Tier eligibility and credits must be checked in the account before deployment. Budget notifications are not a hard spending cap.
+
 **The default application runs locally in simulation.** It implements the recovery workflow with a React dashboard, Python API, SQLite ledger, and simulated idempotent shipment service. A separate AWS sandbox backend and Terraform stack are now implemented and tested offline; they have not been deployed into a customer account. See the [AWS architecture](docs/aws-architecture.md) and [deployment walkthrough](docs/aws-deployment.md). The local dashboard's demo identities are not AWS authentication.
 
 ## Run

@@ -1,0 +1,44 @@
+# AWS demo cost controls
+
+The target for the first cloud demo is to avoid out-of-pocket spending. This is a constraint to verify against the account's actual plan, credits, and current usage, not something Terraform or a budget alert can guarantee. No resources should be deployed until those account details have been checked.
+
+An AWS budget is a warning threshold. It does not reserve money, prepay a service, or prevent requests from being billed. Billing and notification data are delayed; more usage can occur before a warning arrives. The stack now includes a zero-spend notification that warns about recorded usage costs before credits, plus the existing percentage notification. Neither is a real-time spending cap.
+
+AWS Free account plans and Paid account plans have different behavior. An eligible Free plan can prevent out-of-pocket charges while active, but expires based on time or exhausted credits and restricts some services. A Paid plan can charge beyond free allowances or credits. Do not upgrade a plan merely to make this demo work without reviewing that consequence. The account's Free Tier page and credit balance are authoritative for its eligibility.
+
+## Minimal profile for a fresh synthetic sandbox
+
+Set `cost_profile="minimal"` before the first deployment. The normal `standard` profile remains available for customer-managed key control and backups. Minimal mode:
+
+- Uses SSE-S3 for evidence, SSE-SQS for queues, and default AWS-owned DynamoDB encryption. Data remains encrypted at rest; the stack creates no customer-managed KMS key and grants no KMS key permissions.
+- Uses three provisioned DynamoDB tables at five read and five write capacity units each, for a fixed total of 15 RCUs and 15 WCUs. There is no autoscaling. This is below the published 25/25 capacity allowance by itself, but the allowance is shared with other eligible account usage and does not establish that this account pays nothing. Capacity throttling is possible for transactional bursts; retry ambiguous API requests using the same idempotency key.
+- Turns off point-in-time backup and metric-alarm resources for the synthetic demo. This reduces backup and monitoring coverage; retain the standard profile for stronger recovery/operational requirements.
+- Retains logs for one day. Evidence retains its existing short lifecycle; business idempotency and audit records do not receive evidence TTL.
+- Uses Cognito Lite, bounded requests, and the existing replay rate limits. No NAT gateway, EC2, RDS, ECS, or hosted frontend is added.
+
+Two separate switches control activity. `consumers_enabled=false` disables the SQS event source mappings so they do not poll idle queues. `replay_enabled=false` sets the replay function's reserved concurrency to zero. Enable them only for an intentional demo, then stop consumers and replay afterward. Turning off activity does not delete storage, provisioned capacity, the API, Cognito, or other resources, and it is not a complete account billing shutdown.
+
+The local ignored deployment file uses minimal mode and leaves both activity switches off. It stores the supplied account ID, region, and notification email locally; these personal deployment values are not committed to GitHub. The named AWS profile still requires a local sign-in.
+
+## What must be checked in the account
+
+1. Free versus Paid plan, approximate creation date, credits remaining, and their expiry.
+2. Existing Free Tier usage in all relevant services, including DynamoDB provisioned capacity, SQS requests, Lambda, logs, API Gateway, Cognito, Step Functions, and S3. A service-level allowance is not dedicated to this project.
+3. Existing AWS resources or charges unrelated to QueueRescue. The budget notification is account-wide and may warn about those too.
+4. Availability of every required service under the current plan. A restricted service should remain undeployed until an alternative is agreed.
+
+If zero charges cannot be established acceptably for the proposed demo, keep using the local simulator and offline AWS tests. They do not require deploying billable resources.
+
+## Existing stacks
+
+Minimal mode is intended for a fresh sandbox. Switching a populated standard stack can remove a KMS key, change encryption management, disable backups, and remove alarms. Existing S3 object versions may still need the old key. Do not apply a profile switch to existing encrypted evidence without a reviewed key/data migration and retention plan. Terraform moved blocks preserve the existing standard key addresses during the module's optional-key refactor; they do not make a deliberate key deletion safe.
+
+## Primary sources
+
+- [AWS Free Tier plans](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier.html)
+- [AWS Budgets notification delay](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html)
+- [KMS key and request pricing](https://aws.amazon.com/kms/pricing/)
+- [DynamoDB pricing and provisioned Free Tier](https://aws.amazon.com/dynamodb/pricing/)
+- [DynamoDB AWS-owned encryption](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/EncryptionAtRest.html)
+- [S3 managed encryption](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingServerSideEncryption.html)
+- [SQS encryption at rest](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html)
