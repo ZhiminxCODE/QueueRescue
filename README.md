@@ -2,7 +2,7 @@
 
 A working local implementation of the supplied technical prototype: investigate failed shipment events, create a selective recovery plan, obtain separate approval, replay at a bounded rate, and verify business outcomes.
 
-**This release runs entirely in simulation.** It does not connect to AWS, deploy infrastructure, receive SQS messages, or delete source messages. It implements the recovery workflow with a React dashboard, Python API, SQLite ledger, and simulated idempotent shipment service. Full AWS deployment and the broader system design remain future work.
+**The default application runs locally in simulation.** It implements the recovery workflow with a React dashboard, Python API, SQLite ledger, and simulated idempotent shipment service. A separate AWS sandbox backend and Terraform stack are now implemented and tested offline; they have not been deployed into a customer account. See the [AWS architecture](docs/aws-architecture.md) and [deployment walkthrough](docs/aws-deployment.md). The local dashboard's demo identities are not AWS authentication.
 
 ## Run
 
@@ -102,6 +102,8 @@ The benchmark indexes and plans 10,000 synthetic events in a temporary SQLite da
 
 [GitHub Actions CI](https://github.com/ZhiminxCODE/QueueRescue/actions/workflows/ci.yml) runs on every push and pull request, and can also be started manually. It runs the backend suite on Python 3.10 and 3.13, the dry-run benchmark on Python 3.13, and a locked dependency install plus frontend build on Node 24. Official actions are pinned to commit revisions; the workflow has read-only repository permissions and requires no AWS credentials.
 
+Additional CI jobs install the pinned AWS SDK/test emulator, run offline AWS adapter/recovery tests, build the Lambda package, validate Terraform, and assert sandbox safety using mocked AWS plans. To run all AWS SDK tests locally, install `requirements-aws-test.txt` into `.venv` and run `.venv/bin/python -m unittest discover -s tests -v`. Without those optional dependencies, the local simulator suite still runs and the AWS SDK tests report a skip.
+
 ## Project layout
 
 ```text
@@ -111,6 +113,10 @@ backend/simulator.py   Independent shipment consumer, retries, leases, deduplica
 backend/server.py      Loopback HTTP API, demo sessions, static asset host
 backend/benchmark.py   Reproducible 10,000-event index/plan benchmark
 tests/                 Safety, persistence, and HTTP integration tests
+cloud/                 AWS API, collector, ledger adapters, replay and shipment Lambdas
+infra/aws/             Terraform sandbox, pinned provider, mocked safety tests
+tools/                 Deterministic packaging and authenticated AWS console helper
+docs/                  AWS architecture, deployment, verification, and teardown guidance
 ```
 
 ## Prototype boundaries and next phase
@@ -119,7 +125,7 @@ Demo sessions deliberately let anyone on this local machine select a role. They 
 
 The simulated consumer processes accepted deliveries asynchronously and commits shipment effects separately from queue acknowledgment. A unique local shipment key demonstrates business idempotency; it does not prove universal exactly-once behavior. The verifier supports an injected status adapter for outage/invalid-response tests and conservatively returns UNKNOWN on connection failures or timeouts. Real remote adapters still need authenticated endpoints, bounded network timeouts, freshness policy, and customer-specific idempotency contracts. Evidence is simulated; the app does not invent real CloudWatch or trace links.
 
-The AWS phase should replace local persistence and transport with DynamoDB conditional writes, encrypted S3 evidence, SQS, Lambda workers, Step Functions execution, Cognito authorizers, scoped IAM/KMS, and Terraform. It also needs opt-in collection with explicit SQS receive visibility behavior, real CloudWatch correlation, source retention alarms, adapter credentials in Secrets Manager, lease expiry across distributed workers, retry/circuit-breaker controls, budgets, protected audit exports, and an explicit source finalization process. Infrastructure has intentionally not been provisioned by this prototype.
+The separate AWS sandbox implements DynamoDB conditional writes, encrypted S3 evidence, real SQS/Lambda handlers, Standard Step Functions execution, Cognito/API Gateway authorization, scoped IAM/KMS, opt-in non-destructive collection, alarms, an optional budget alert, and Terraform. It still needs deployment and service-level validation in your development account. Native browser dashboard integration, real CloudWatch correlation, large workloads, external verifier credentials/freshness policy, protected audit archival, manual resolution, and explicit source finalization remain later work. Infrastructure has intentionally not been provisioned during this implementation.
 
 Relevant platform semantics checked against the primary AWS documentation:
 

@@ -1,0 +1,165 @@
+# AWS sandbox deployment and verification
+
+The AWS backend and infrastructure are implemented and tested offline. This is not evidence of a successful deployment into your account. The existing React dashboard remains a local simulator; use the authenticated AWS console helper below for the first cloud demonstration. No account credentials have been requested or used during implementation.
+
+## Inputs needed before deployment
+
+- A development AWS account ID and region. The default example region is `us-east-1`; the stack rejects production environment labels and unexpected account IDs.
+- A local temporary-credential profile, normally `queuerescue-dev`, using a non-root identity. Do not send passwords, access keys, or session tokens in chat or add them to Git.
+- A budget alert email and an account-wide monthly notification threshold. The example value is configuration, not a cost estimate. Budgets are delayed notifications, not a hard spending cap.
+- Two different email identities for the Operator and Approver. No application users or administrator memberships are created automatically.
+- Permission to create the listed sandbox resources and scoped IAM roles. Your account owner controls these permissions; no permanent vendor administrator key is required.
+
+The stack creates five Lambda functions, four standard SQS queues, three encrypted on-demand DynamoDB tables, a versioned encrypted S3 bucket, a customer-managed KMS key, a Cognito user pool/client/groups, an authenticated HTTP API, a Standard state machine, log groups, alarms, and an SNS topic. A budget and email subscription are created only when an alert email is configured. KMS, alarms, point-in-time recovery, storage, and usage can incur charges even with little traffic. There is no NAT gateway, ECS cluster, EC2 instance, or hosted frontend.
+
+## Account-free build and checks
+
+From the repository root, with Python 3.10+ and Terraform 1.17.2:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-aws-test.txt
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python tools/package_aws.py
+terraform -chdir=infra/aws init -backend=false -input=false -lockfile=readonly
+terraform -chdir=infra/aws fmt -check -recursive
+terraform -chdir=infra/aws validate
+terraform -chdir=infra/aws test
+```
+
+The infrastructure tests use `mock_provider`; they never create AWS resources or authenticate to a customer account. The provider and runtime dependencies are pinned. The deterministic zip is stored in ignored `infra/aws/.build/`; it includes only runtime source and SDK dependencies. It excludes credentials, state, tests, the Word specification, and local databases.
+
+## Authenticate and review deployment
+
+Configure your non-root local AWS identity first. A recent AWS CLI supports browser-based temporary-credential login; accounts using IAM Identity Center use `aws configure sso` / `aws sso login` instead.
+
+```sh
+aws login --profile queuerescue-dev
+aws sts get-caller-identity --profile queuerescue-dev
+```
+
+Confirm the account and identity yourself. Copy `infra/aws/terraform.tfvars.example` to `infra/aws/terraform.tfvars` and enter your account, profile, region, email, and budget threshold. The local values file, state, saved plans, and deployment outputs are ignored by Git. Keep Terraform state backed up securely; migrate it to an encrypted, access-controlled remote backend before collaboration or production use.
+
+Build the Lambda package, then prepare a saved plan:
+
+```sh
+.venv/bin/python tools/package_aws.py
+terraform -chdir=infra/aws init -input=false -lockfile=readonly
+terraform -chdir=infra/aws plan -out=reviewed.tfplan
+```
+
+Review the exact resource creation, permissions, target account, deletion protection, and notification settings. Only after that review, deploy the saved plan:
+
+```sh
+terraform -chdir=infra/aws apply reviewed.tfplan
+mkdir -p .data
+terraform -chdir=infra/aws output -json deployment > .data/aws-deployment.json
+```
+
+No CI job applies Terraform or holds AWS credentials. Confirm the SNS email subscription if email notifications were configured. Budget notifications use the supplied account-wide threshold, so existing account spending also contributes.
+
+## Create separate operator and approver identities
+
+Using the Cognito console or your authenticated AWS CLI, create two users in the output user pool. Add one to the `Operator` group and the other to `Approver`; use `Viewer` for read-only inspection. Keep initial passwords and password changes in AWS's sign-in flow. Enable TOTP MFA for these users. The public Cognito client uses authorization code + PKCE and has no client secret; API Gateway requires a scoped access token and the Lambda separately enforces group capabilities.
+
+Application approval compares Cognito `sub` identities. An Admin cannot self-approve a plan they created. The local demo identity selector does not grant AWS permissions and is never used by this backend.
+
+## Seed a bounded synthetic incident
+
+The helper verifies the AWS account and rejects root before writing. Each seed run uses unique operation IDs and conditional initial business records. It never overwrites an existing shipment.
+
+```sh
+.venv/bin/python -m tools.aws_console seed --profile queuerescue-dev --count 20
+```
+
+About one in ten events has UNKNOWN business state; another uses a timeout after the shipment effect; the rest time out before the effect. The source Lambda returns partial batch failures. With a 180-second visibility timeout and three receives before dead lettering, allow several minutes for failures to reach the DLQ; the full path can take roughly nine minutes plus polling. Completed-but-timed-out source events continue failing until dead lettering so the demonstration can show why blind replay is unsafe.
+
+## Sign in and inspect AWS snapshots
+
+```sh
+.venv/bin/python -m tools.aws_console login
+```
+
+Complete Cognito sign-in as Operator in the browser. The callback binds only to loopback port 8765 and checks a random OAuth state; the code exchange uses PKCE. Only the access token is saved to ignored `.data/aws-token.json` with mode 0600. No passwords or refresh tokens are saved. `login --no-browser` prints the authorization URL if you prefer a private window or a separate browser profile. Sign in again after token expiry.
+
+Create `.data/collect.json` containing:
+
+```json
+{"acknowledgeVisibilityChange": true}
+```
+
+Then run:
+
+```sh
+.venv/bin/python -m tools.aws_console call POST /collections --body .data/collect.json
+.venv/bin/python -m tools.aws_console call GET /messages
+```
+
+Collection invokes a separately scoped Lambda. It samples at most ten DLQ messages, snapshots their bodies and attributes, and releases their visibility lease. It does not delete originals. Repeated sampling may return already indexed messages; it is not a guarantee of a complete queue inventory. Pagination uses opaque `nextCursor` values, e.g. `--query '{"limit":10,"cursor":"RETURNED_CURSOR"}'`. Message details are available at `/messages/MESSAGE_ID` and return a masked payload.
+
+## Plan, approve, execute, and verify
+
+Create `.data/plan.json` with explicit indexed snapshot IDs, a controlled rate, and no arbitrary destination:
+
+```json
+{"messageIds": ["REPLACE_WITH_SNAPSHOT_ID"], "rate": 5}
+```
+
+```sh
+.venv/bin/python -m tools.aws_console call POST /replay-plans --body .data/plan.json
+.venv/bin/python -m tools.aws_console call GET /replay-plans/PLAN_ID
+```
+
+The first sandbox supports 1–25 messages per plan and 1–25 messages/second as a maximum send rate. It may send more slowly because of orchestration overhead. Plans bind the exact body/evidence checksums, deployment package version, destination, decisions, and one-hour expiry. Missing proof, schema errors, conflicting attributes, oversized bodies, and unknown/in-progress outcomes are excluded; completed operations are skipped.
+
+Sign out of the Operator's Cognito session and use the separate Approver identity. A private browser profile with `login --no-browser` helps keep identities distinct. Create `.data/approve.json`:
+
+```json
+{"planHash": "REPLACE_WITH_EXACT_PLAN_HASH", "note": "Reviewed business outcomes and bounded replay rate."}
+```
+
+```sh
+.venv/bin/python -m tools.aws_console call POST /replay-plans/PLAN_ID/approve --body .data/approve.json
+```
+
+Sign back in as Operator. Create `.data/start.json` with `{"approvedPlanId":"PLAN_ID"}` and start:
+
+```sh
+.venv/bin/python -m tools.aws_console call POST /replay-jobs --body .data/start.json
+.venv/bin/python -m tools.aws_console call GET /replay-jobs/JOB_ID
+```
+
+The Standard workflow invokes bounded replay chunks. The replay role can send only to the dedicated replay queue. Conditional operation reservations prevent overlapping jobs. Each send has a durable intent and unique replay identity before SQS is called; original body bytes and attributes are preserved. A send timeout or worker error pauses for reconciliation rather than blindly retrying.
+
+Create `.data/verify.json` with `{"jobId":"JOB_ID"}`:
+
+```sh
+.venv/bin/python -m tools.aws_console call POST /verifications --body .data/verify.json
+.venv/bin/python -m tools.aws_console call GET /audit
+```
+
+Only domain-confirmed shipments are VERIFIED. Accepted sends without completion proof remain UNVERIFIED; late proof can move PARTIAL to COMPLETED. The tool retries ambiguous HTTP failures with the same idempotency key. API Gateway may time out before a longer Lambda finishes; reuse the same request key to recover the committed response, rather than generating a new logical mutation. To explicitly retain a key across separate CLI invocations, pass `--key YOUR_UNIQUE_REQUEST_KEY`.
+
+Pause, resume, and cancel use POST `/replay-jobs/JOB_ID/pause`, `/resume`, and `/cancel` with an optional `reason`. Cancellation stops new scheduling and retains already accepted sends for verification. Reconciliation never automatically removes source messages or discards reservations for uncertain business effects.
+
+## Kill switch and failure investigation
+
+Set `replay_enabled=false`, review the plan, and apply it to set the replay function's reserved concurrency to zero. This blocks new invocations; an already running invocation may finish its bounded in-flight work. Source consumers are independent. Restore the switch only after investigating the incident.
+
+Inspect Step Functions execution status, the job ledger, replay DLQ, and CloudWatch alarms. The send task has no broad automatic Retry. Its Catch path invokes conservative ledger reconciliation; retry is limited to safe reconciliation invocation failures. A workflow-level timeout cannot be caught by that task Catch, so it raises an alarm and requires operator reconciliation. If needed, an authenticated deployment operator can invoke the replay Lambda with `{"jobId":"JOB_ID","generation":0,"action":"recover"}` using the job's actual generation, then verify before resuming.
+
+## Retention and teardown
+
+Evidence objects and expired index/request records have a short retention policy. DynamoDB TTL is eventual; expired snapshots are also rejected in application checks. Business idempotency and audit tables do not have evidence TTL. Audit application roles can append/read but not update/delete; this is not protection against account administrators. This sandbox does not create an independent CloudTrail archive or immutable external audit vault.
+
+Deletion protection is on for tables and the user pool; S3 evidence is not force-deleted by default. Teardown therefore requires a deliberate choice about exports and evidence destruction. Review a destroy plan and its retained-data implications before disabling `protect_data` or enabling `allow_destroy_evidence`. Scheduled KMS deletion can eventually make retained encrypted data unreadable; retain the key with any retained evidence. Do not assume a failed partial destroy leaves all other resources unchanged. Check the account afterward for remaining KMS keys, tables, storage, alarms, and budget resources that can continue to incur charges.
+
+```sh
+terraform -chdir=infra/aws plan -destroy -out=reviewed-destroy.tfplan
+```
+
+Do not apply that plan until the data-retention decision and protection settings have been reviewed. This implementation has not performed a deployment or teardown in your account.
+
+## Remaining AWS milestones
+
+Real account validation, a browser-connected AWS dashboard, real CloudWatch failure correlation, large-volume inventory/replay, richer reports/manual resolution, and stronger protected audit archival remain future work. The current offline tests and mocked Terraform plans do not prove real IAM propagation, Cognito email delivery, service quotas, account policy compatibility, or actual AWS cost.
