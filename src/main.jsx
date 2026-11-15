@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpRight, Bell, Boxes, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, Clock3, Database, FileCheck2, FileText, Fingerprint, GitBranch, Inbox, Layers3, LayoutDashboard, ListFilter, LoaderCircle, LockKeyhole, Menu, Pause, Play, Plus, Radio, RefreshCw, Search, ShieldCheck, ShieldX, Square, Terminal, TriangleAlert, Unplug, X } from 'lucide-react';
 import { api, download, login, query } from './api';
+import CloudApp from './cloud/CloudApp.jsx';
+import { dashboardConfig } from './cloud/config.js';
 import './styles.css';
 
 const fmt = n => new Intl.NumberFormat().format(n || 0);
@@ -195,4 +197,13 @@ function Connections({ notify }) {
   return <><SectionTitle eyebrow="EXPLICITLY ALLOWLISTED" title="Connections" text="One standard queue, one controlled destination, and an application-owned verifier." /><section className="panel connection-panel"><div className="panel-heading"><div><h2><Boxes size={22} />Shipment recovery</h2><p>Single-account, single-region prototype</p></div><Badge color="blue">Simulated connection</Badge></div>{connection && <div className="connection-body"><div className="connection-flow">{[[Boxes, connection.source, 'Source queue'], [Terminal, connection.worker, 'Lambda consumer'], [Inbox, connection.id, 'Dead-letter queue']].map(([Icon, value, label], i) => <React.Fragment key={label}>{i > 0 && <ArrowRight size={20} className="muted" />}<div><Icon size={25} /><strong className="mono">{value}</strong><small>{label}</small></div></React.Fragment>)}</div><div className="info-grid">{[['Replay destination', connection.destination], ['Queue type', connection.type], ['Region', connection.region], ['Consumer deployment', connection.consumerVersion], ['Status adapter', connection.verifier], ['Idempotency contract', connection.idempotency], ['Log group', connection.logGroup], ['Evidence retention', 'Local snapshots persist until the demo database is removed']].map(([k, v]) => <div key={k}><span>{k}</span><strong>{v}</strong></div>)}</div><div className="inline-note"><ShieldCheck size={18} />AWS adapters, Cognito, KMS, and Terraform deployment belong to the next implementation phase. No cloud access keys are used here.</div></div>}</section></>;
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+function Bootstrap() {
+  const [workspace] = useState(() => {
+    try { return { config: dashboardConfig(import.meta.env, location) }; }
+    catch (error) { return { error: error.message }; }
+  });
+  if (workspace.error) return <div className="cloud-login"><section className="panel cloud-login-card"><h1>AWS workspace isn’t configured.</h1><p role="alert">{workspace.error}</p><p>Ask your workspace administrator to finish the connection settings.</p></section></div>;
+  return workspace.config.mode === 'aws' ? <CloudApp config={workspace.config} /> : <App />;
+}
+
+createRoot(document.getElementById('root')).render(<Bootstrap />);
