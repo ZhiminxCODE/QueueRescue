@@ -16,7 +16,7 @@ Set `cost_profile="minimal"` before the first deployment. The normal `standard` 
 - Retains logs for one day. Evidence retains its existing short lifecycle; business idempotency and audit records do not receive evidence TTL.
 - Uses Cognito Lite, bounded requests, and the existing replay rate limits. No NAT gateway, EC2, RDS, ECS, or hosted frontend is added.
 
-Two separate switches control activity. `consumers_enabled=false` disables the SQS event source mappings so they do not poll idle queues. `replay_enabled=false` sets the replay function's reserved concurrency to zero. Enable them only for an intentional demo, then stop consumers and replay afterward. Turning off activity does not delete storage, provisioned capacity, the API, Cognito, or other resources, and it is not a complete account billing shutdown.
+Two separate switches control activity. `consumers_enabled=false` disables the SQS event source mappings so they do not poll idle queues and sets consumer reserved concurrency to zero. `replay_enabled=false` sets the replay function's reserved concurrency to zero. Enable them only for an intentional demo, then stop consumers and replay afterward. Turning off activity does not delete storage, provisioned capacity, the API, Cognito, or other resources, and it is not a complete account billing shutdown.
 
 The local ignored deployment file uses minimal mode and leaves both activity switches off. It stores the supplied account ID, region, and notification email locally; these personal deployment values are not committed to GitHub. The named AWS profile requires a local temporary-credential sign-in.
 
@@ -28,6 +28,8 @@ The local ignored deployment file uses minimal mode and leaves both activity swi
 4. Availability of every required service under the current plan. A restricted service should remain undeployed until an alternative is agreed.
 
 The [read-only readiness helper](aws-deployment.md#read-only-account-readiness) collects MFA registration, account plan/offer data, and regional capacity metadata under a narrow inspection policy. It never grants permissions, upgrades a plan, creates resources, or calls the paid Cost Explorer API. Inaccessible data remains unknown and requires follow-up. API Gateway's legacy free usage is limited to the first 12 months after account signup; an older account with no applicable credits may incur usage charges even for a tiny demo.
+
+Check Lambda concurrency before enabling activity. The active sandbox reserves four units for consumers and one for replay, while [AWS requires 100 units to remain unreserved](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html). A regional quota of ten cannot accommodate those active settings. Both idle switches use zero reservations; they do not make the active demo quota requirement disappear. The readiness report flags available reservation capacity. Review a quota increase or a separately tested design change before enabling workers; this repository never requests an increase automatically.
 
 If zero charges cannot be established acceptably for the proposed demo, keep using the local simulator and offline AWS tests. They do not require deploying billable resources.
 

@@ -28,7 +28,7 @@ class FakeReader:
             ('dynamodb', 'list-tables'): {'TableNames': ['another-project']},
             ('dynamodb', 'describe-table'): {'Table': {'TableStatus': 'ACTIVE',
                 'ProvisionedThroughput': {'ReadCapacityUnits': 12, 'WriteCapacityUnits': 8}}},
-            ('lambda', 'get-account-settings'): {'AccountLimit': {'ConcurrentExecutions': 10},
+            ('lambda', 'get-account-settings'): {'AccountLimit': {'ConcurrentExecutions': 10, 'UnreservedConcurrentExecutions': 10},
                                                   'AccountUsage': {'FunctionCount': 2}},
         }
 
@@ -88,6 +88,16 @@ class ReadinessTests(unittest.TestCase):
         read = FakeReader()
         read.values[('freetier', 'get-free-tier-usage')]['NextToken'] = 'more'
         self.assertFalse(self.inspect(read)['checks']['free_tier_usage']['data']['complete'])
+
+    def test_small_lambda_quota_does_not_pass_active_demo_capacity(self):
+        capacity = self.inspect(FakeReader())['checks']['lambda_capacity']['data']
+        self.assertEqual(capacity['additional_reservable_capacity'], 0)
+        self.assertFalse(capacity['active_demo_reservations_fit'])
+        read = FakeReader()
+        read.values[('lambda', 'get-account-settings')]['AccountLimit']['UnreservedConcurrentExecutions'] = 105
+        capacity = self.inspect(read)['checks']['lambda_capacity']['data']
+        self.assertEqual(capacity['additional_reservable_capacity'], 5)
+        self.assertTrue(capacity['active_demo_reservations_fit'])
 
     def test_invalid_service_response_is_unknown_and_other_reads_continue(self):
         read = FakeReader()

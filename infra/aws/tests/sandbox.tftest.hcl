@@ -85,6 +85,10 @@ run "safe_sandbox_plan" {
     condition     = length(aws_dynamodb_table.data["audit"].ttl) == 0 && length(aws_dynamodb_table.data["business"].ttl) == 0
     error_message = "Business idempotency and audit records must not inherit snapshot TTL."
   }
+  assert {
+    condition     = aws_lambda_function.function["consumer"].reserved_concurrent_executions == 4 && aws_lambda_function.function["replay"].reserved_concurrent_executions == 1
+    error_message = "Active consumers and replay must retain their bounded reserved concurrency."
+  }
 }
 
 run "replay_kill_switch" {
@@ -130,8 +134,12 @@ run "minimal_profile_keeps_encryption_without_fixed_cost_extras" {
     error_message = "Minimal mode must not create metric alarms."
   }
   assert {
-    condition     = alltrue([for mapping in aws_lambda_event_source_mapping.shipment : !mapping.enabled]) && aws_lambda_function.function["replay"].reserved_concurrent_executions == 0
-    error_message = "The idle settings must stop polling and replay invocations."
+    condition     = alltrue([for mapping in aws_lambda_event_source_mapping.shipment : !mapping.enabled]) && aws_lambda_function.function["replay"].reserved_concurrent_executions == 0 && aws_lambda_function.function["consumer"].reserved_concurrent_executions == 0
+    error_message = "The idle settings must stop polling, consumer/replay invocations, and positive concurrency reservations."
+  }
+  assert {
+    condition     = alltrue([for mapping in aws_lambda_event_source_mapping.shipment : length(mapping.scaling_config) == 0])
+    error_message = "Disabled mappings must not request a positive maximum concurrency against a zero-reserved consumer."
   }
   assert {
     condition     = anytrue([for notice in aws_budgets_budget.sandbox[0].notification : notice.threshold == 0 && notice.threshold_type == "ABSOLUTE_VALUE"])

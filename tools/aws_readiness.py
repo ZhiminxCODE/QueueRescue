@@ -183,7 +183,15 @@ def inspect_account(read, account_id, user_name, region):
 
     def concurrency():
         response = read('lambda', 'get-account-settings')
-        return {'limits': response['AccountLimit'], 'usage': response['AccountUsage']}
+        unreserved = response['AccountLimit']['UnreservedConcurrentExecutions']
+        if type(unreserved) is not int or unreserved < 0:
+            raise ValueError()
+        reservable = max(0, unreserved - 100)
+        return {'limits': response['AccountLimit'], 'usage': response['AccountUsage'],
+                'additional_reservable_capacity': reservable,
+                'active_demo_reservation_required': 5,
+                'active_demo_reservations_fit': reservable >= 5,
+                'note': 'Fresh/idle stack check: active consumers reserve 4 and replay reserves 1. AWS requires 100 unreserved units; idle switches reserve zero. Existing stack reservations need separate review. Recheck before enabling.'}
 
     for name, operation in [('identity', identity), ('mfa', mfa), ('account_plan', plan),
                             ('free_tier_usage', offers), ('regional_tables', capacity),

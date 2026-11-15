@@ -74,6 +74,8 @@ The default CLI path is `.data/bin/aws`; pass `--aws-cli aws` for a normal insta
 
 Review the report alongside the billing console. Registering an MFA device does not prove an existing CLI session used MFA; sign in again after enrollment. Missing Free Tier offers are not proof of eligibility, and regional capacity totals do not establish account-wide allowances. In particular, [API Gateway's legacy free usage expires after 12 months](https://aws.amazon.com/api-gateway/pricing/). This tool always leaves `deployment_ready=false`: human cost/permission review remains necessary. It does not apply Terraform or guarantee a $0 bill.
 
+The Lambda capacity section also checks whether a fresh/idle stack can allocate the active demo's five reserved concurrency units while leaving AWS's required unreserved pool available. Resolve an insufficient quota before enabling consumers or replay; idle settings use zero reservations and no positive SQS mapping concurrency setting. A `ResourceNotFoundException` from the account-plan API remains unknown eligibility, even if other reads succeed; it is not permission to deploy.
+
 Build the Lambda package, then prepare a saved plan:
 
 ```sh

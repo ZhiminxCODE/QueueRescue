@@ -75,7 +75,7 @@ resource "aws_lambda_function" "function" {
   source_code_hash               = filebase64sha256(var.lambda_package)
   timeout                        = each.key == "api" ? 120 : each.key == "collector" ? 60 : each.key == "replay" ? 60 : 30
   memory_size                    = 256
-  reserved_concurrent_executions = each.key == "replay" ? (var.replay_enabled ? 1 : 0) : each.key == "consumer" ? 4 : -1
+  reserved_concurrent_executions = each.key == "replay" ? (var.replay_enabled ? 1 : 0) : each.key == "consumer" ? (var.consumers_enabled ? 4 : 0) : -1
   environment { variables = local.environment }
   depends_on = [aws_iam_role_policy.function, aws_cloudwatch_log_group.function]
 }
@@ -86,7 +86,10 @@ resource "aws_lambda_event_source_mapping" "shipment" {
   enabled                 = var.consumers_enabled
   batch_size              = 10
   function_response_types = ["ReportBatchItemFailures"]
-  scaling_config { maximum_concurrency = 2 }
+  dynamic "scaling_config" {
+    for_each = var.consumers_enabled ? [1] : []
+    content { maximum_concurrency = 2 }
+  }
 }
 
 resource "aws_iam_role" "workflow" {

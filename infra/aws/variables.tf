@@ -37,7 +37,7 @@ variable "cost_profile" {
   }
 }
 variable "consumers_enabled" {
-  description = "Enable source/replay consumers during an explicit demo; false stops idle polling."
+  description = "Enable source/replay consumers during an explicit demo; false stops polling and sets consumer reserved concurrency to zero."
   type        = bool
   default     = true
 }
