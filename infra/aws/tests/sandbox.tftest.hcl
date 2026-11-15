@@ -78,6 +78,10 @@ run "safe_sandbox_plan" {
     error_message = "Every AWS API route must require scoped authentication."
   }
   assert {
+    condition     = contains(aws_cognito_user_pool_client.dashboard.callback_urls, "http://localhost:8000/") && contains(aws_apigatewayv2_api.api.cors_configuration[0].allow_origins, "http://localhost:8000")
+    error_message = "The built local dashboard origin must be registered for both Cognito and API CORS."
+  }
+  assert {
     condition     = alltrue([for table in aws_dynamodb_table.data : table.deletion_protection_enabled]) && !aws_s3_bucket.evidence.force_destroy
     error_message = "Evidence and ledger destruction must be opt-in."
   }

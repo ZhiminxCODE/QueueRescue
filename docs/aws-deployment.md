@@ -1,6 +1,6 @@
 # AWS sandbox deployment and verification
 
-The AWS backend and infrastructure are implemented and tested offline. This is not evidence of a successful deployment into your account. The existing React dashboard remains a local simulator; use the authenticated AWS console helper below for the first cloud demonstration. No account credentials have been requested or used during implementation.
+The AWS backend, dashboard integration, and infrastructure are implemented and tested offline. This is not evidence of a successful deployment into your account. The React dashboard defaults to local simulation; [configure AWS dashboard mode](dashboard-aws.md) after deployment, or use the authenticated AWS console helper below. Development account inspection uses a local temporary-credential profile; passwords and keys must not be shared or committed.
 
 For a demo constrained by Free Tier eligibility, first read [cost controls](aws-cost-controls.md). A fresh sandbox can select `cost_profile="minimal"`, which keeps service-owned encryption while removing customer-managed KMS keys, paid backups, and metric alarms. Check the account's plan, credits, and shared usage before deployment; there is no guaranteed $0 cap. Leave `consumers_enabled=false` and `replay_enabled=false` until an intentional demo is ready.
 
@@ -200,4 +200,4 @@ Do not apply that plan until the data-retention decision and protection settings
 
 ## Remaining AWS milestones
 
-Real account validation, a browser-connected AWS dashboard, real CloudWatch failure correlation, large-volume inventory/replay, richer reports/manual resolution, and stronger protected audit archival remain future work. The current offline tests and mocked Terraform plans do not prove real IAM propagation, Cognito email delivery, service quotas, account policy compatibility, or actual AWS cost.
+Real account and browser sign-in/CORS validation, real CloudWatch failure correlation, large-volume inventory/replay, richer reports/manual resolution, and stronger protected audit archival remain future work. The browser integration is implemented but has not been exercised against a live deployed stack. The current offline tests and mocked Terraform plans do not prove real IAM propagation, Cognito email delivery, service quotas, account policy compatibility, or actual AWS cost.

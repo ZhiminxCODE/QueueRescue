@@ -63,7 +63,7 @@ variable "replay_enabled" {
 }
 variable "callback_urls" {
   type    = list(string)
-  default = ["http://localhost:5173/", "http://localhost:8765/callback"]
+  default = ["http://localhost:5173/", "http://localhost:8000/", "http://localhost:8765/callback"]
   validation {
     condition     = length(var.callback_urls) > 0 && alltrue([for url in var.callback_urls : startswith(url, "https://") || startswith(url, "http://localhost:")])
     error_message = "Cognito callbacks must use HTTPS or an explicit localhost development port."

@@ -4,6 +4,7 @@ import { webcrypto } from 'node:crypto';
 import { dashboardConfig } from '../../src/cloud/config.js';
 import { createAuth, pkceChallenge } from '../../src/cloud/auth.js';
 import { createClient } from '../../src/cloud/client.js';
+import { dashboardEnvironment } from '../../tools/configure_dashboard.mjs';
 
 const env = { VITE_QR_MODE: 'aws', VITE_QR_REGION: 'us-east-1', VITE_QR_API_URL: 'https://example123.execute-api.us-east-1.amazonaws.com',
   VITE_QR_COGNITO_URL: 'https://example123.auth.us-east-1.amazoncognito.com', VITE_QR_COGNITO_CLIENT_ID: 'example123', VITE_QR_REDIRECT_URI: 'http://localhost:5173/' };
@@ -22,6 +23,14 @@ test('AWS configuration fails closed for arbitrary endpoints and wrong callback 
 
 test('PKCE matches RFC 7636', async () => {
   assert.equal(await pkceChallenge('dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk', webcrypto), 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+});
+
+test('dashboard configuration exports only validated public deployment fields', () => {
+  const result = dashboardEnvironment({ region: 'us-east-1', api_url: env.VITE_QR_API_URL,
+    cognito_login_url: env.VITE_QR_COGNITO_URL, cognito_client_id: 'example123', secret_access_key: 'never-export' }, env.VITE_QR_REDIRECT_URI);
+  assert.match(result, /VITE_QR_MODE="aws"/);
+  assert.doesNotMatch(result, /never-export|secret_access_key/);
+  assert.throws(() => dashboardEnvironment({ region: 'us-east-1' }, env.VITE_QR_REDIRECT_URI));
 });
 
 test('callback is state-bound, single-use, scrubbed before exchange, and stores only access token', async () => {
@@ -105,4 +114,27 @@ test('a rejection after an uncertain response retains the pending request for re
   await assert.rejects(client.write('/replay-jobs', { approvedPlanId: 'plan-1' }, { id: 'operator' }));
   await assert.rejects(client.retry({ id: 'operator' }), error => error.uncertain);
   assert.ok(client.pending());
+});
+
+test('old saved requests stop before transmission rather than outliving the server cache', async () => {
+  const store = storage(); let clock = 10000, calls = 0;
+  const client = createClient(config, { session: () => ({ accessToken: 'access' }) }, {
+    storage: store, now: () => clock, uuid: () => 'request-key-1', fetcher: async () => { calls++; throw new TypeError('lost'); },
+  });
+  await assert.rejects(client.write('/replay-jobs', { approvedPlanId: 'plan-1' }, { id: 'operator' }));
+  clock += 6 * 86400000;
+  await assert.rejects(client.retry({ id: 'operator' }), /administrator reconciliation/);
+  assert.equal(calls, 1);
+});
+
+test('sessions and pending requests stay isolated between configured AWS workspaces', async () => {
+  const store = storage();
+  const auth = createAuth(config, { storage: store, crypto: webcrypto, fetcher: async () => json({ access_token: 'token', token_type: 'Bearer', expires_in: 900 }) });
+  const url = new URL(await auth.begin());
+  await auth.complete(config.redirectUri + '?code=c&state=' + url.searchParams.get('state'), () => {});
+  const other = { ...config, binding: config.binding + ':other' };
+  assert.equal(createAuth(other, { storage: store }).session(), null);
+  const client = createClient(config, auth, { storage: store, uuid: () => 'request-key-1', fetcher: async () => { throw new Error('offline'); } });
+  await assert.rejects(client.write('/collections', { acknowledgeVisibilityChange: true }, { id: 'operator' }));
+  assert.equal(createClient(other, auth, { storage: store }).pending(), null);
 });

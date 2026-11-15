@@ -48,7 +48,7 @@ export function createClient(config, auth, { storage = sessionStorage, fetcher =
     if (sending) throw new APIError('Wait for the current request to finish.');
     const value = pending();
     if (!value || value.subject !== actor.id) throw new APIError('Sign in as the original requester to recover this saved request.');
-    if (now() - value.createdAt >= 6 * 86400000) throw new APIError('This saved request requires administrator reconciliation before retrying.');
+    if (value.createdAt > now() || now() - value.createdAt >= 6 * 86400000) throw new APIError('This saved request requires administrator reconciliation before retrying.');
     sending = true;
     try {
       const result = await request(value.path, 'POST', value.body, value.requestKey);

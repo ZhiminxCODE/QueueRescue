@@ -38,7 +38,9 @@ export function createAuth(config, { storage = sessionStorage, crypto = globalTh
     const flow = read(flowKey);
     clear();
     if (url.origin + url.pathname !== config.redirectUri ||
-        !flow || flow.binding !== config.binding || now() - flow.createdAt > 600000 || flow.createdAt > now() ||
+        !flow || flow.binding !== config.binding || !Number.isFinite(flow.createdAt) ||
+        typeof flow.verifier !== 'string' || !/^[A-Za-z0-9_-]{43,128}$/.test(flow.verifier) ||
+        now() - flow.createdAt > 600000 || flow.createdAt > now() ||
         url.searchParams.getAll('state').length !== 1 || url.searchParams.get('state') !== flow.state) throw new Error('Sign-in could not be verified. Start a new sign-in.');
     if (url.searchParams.has('error')) throw new Error('Sign-in was cancelled or refused. Start again when ready.');
     if (url.searchParams.getAll('code').length !== 1 || !url.searchParams.get('code')) throw new Error('Invalid sign-in response.');
