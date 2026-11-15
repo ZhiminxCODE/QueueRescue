@@ -50,6 +50,8 @@ Check `aws --version` before starting. If a newer CLI has been prepared in the i
 
 For the console-based login flow, the non-root IAM user or role needs `SignInLocalDevelopmentAccess`, in addition to its separately reviewed deployment permissions. That policy enables temporary local sign-in; it does not grant permission to deploy the stack. If you only have the account's root login, establish a non-root development identity before continuing. See [AWS's browser login prerequisites](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html). Do not approve a root session for this project.
 
+A new user with only `SignInLocalDevelopmentAccess` and `IAMUserChangePassword` can sign in but cannot list IAM users or deploy resources. An `iam:ListUsers` denial on an IAM landing page is expected for that initial setup; do not recreate the user or add administrator access just to clear the page. Complete CLI login with the existing non-root session, then use `sts get-caller-identity` to verify it. AWS documents that [GetCallerIdentity requires no permissions](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html). MFA enrollment and project deployment permissions still need to be configured through an authorized account administrator before deployment.
+
 This developer login is separate from `python -m tools.aws_console login`, which signs an application Operator or Approver into Cognito after deployment. The next account milestone is to verify the developer identity and cost eligibility, then review a Terraform plan. Preparing a plan does not deploy resources.
 
 Build the Lambda package, then prepare a saved plan:
