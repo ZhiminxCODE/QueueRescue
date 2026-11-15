@@ -18,7 +18,7 @@ Set `cost_profile="minimal"` before the first deployment. The normal `standard` 
 
 Two separate switches control activity. `consumers_enabled=false` disables the SQS event source mappings so they do not poll idle queues. `replay_enabled=false` sets the replay function's reserved concurrency to zero. Enable them only for an intentional demo, then stop consumers and replay afterward. Turning off activity does not delete storage, provisioned capacity, the API, Cognito, or other resources, and it is not a complete account billing shutdown.
 
-The local ignored deployment file uses minimal mode and leaves both activity switches off. It stores the supplied account ID, region, and notification email locally; these personal deployment values are not committed to GitHub. The named AWS profile still requires a local sign-in.
+The local ignored deployment file uses minimal mode and leaves both activity switches off. It stores the supplied account ID, region, and notification email locally; these personal deployment values are not committed to GitHub. The named AWS profile requires a local temporary-credential sign-in.
 
 ## What must be checked in the account
 
@@ -26,6 +26,8 @@ The local ignored deployment file uses minimal mode and leaves both activity swi
 2. Existing Free Tier usage in all relevant services, including DynamoDB provisioned capacity, SQS requests, Lambda, logs, API Gateway, Cognito, Step Functions, and S3. A service-level allowance is not dedicated to this project.
 3. Existing AWS resources or charges unrelated to QueueRescue. The budget notification is account-wide and may warn about those too.
 4. Availability of every required service under the current plan. A restricted service should remain undeployed until an alternative is agreed.
+
+The [read-only readiness helper](aws-deployment.md#read-only-account-readiness) collects MFA registration, account plan/offer data, and regional capacity metadata under a narrow inspection policy. It never grants permissions, upgrades a plan, creates resources, or calls the paid Cost Explorer API. Inaccessible data remains unknown and requires follow-up. API Gateway's legacy free usage is limited to the first 12 months after account signup; an older account with no applicable credits may incur usage charges even for a tiny demo.
 
 If zero charges cannot be established acceptably for the proposed demo, keep using the local simulator and offline AWS tests. They do not require deploying billable resources.
 
@@ -42,3 +44,4 @@ Minimal mode is intended for a fresh sandbox. Switching a populated standard sta
 - [DynamoDB AWS-owned encryption](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/EncryptionAtRest.html)
 - [S3 managed encryption](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingServerSideEncryption.html)
 - [SQS encryption at rest](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-server-side-encryption.html)
+- [API Gateway pricing and 12-month Free Tier](https://aws.amazon.com/api-gateway/pricing/)

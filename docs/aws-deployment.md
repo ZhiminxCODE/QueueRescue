@@ -54,6 +54,26 @@ A new user with only `SignInLocalDevelopmentAccess` and `IAMUserChangePassword` 
 
 This developer login is separate from `python -m tools.aws_console login`, which signs an application Operator or Approver into Cognito after deployment. The next account milestone is to verify the developer identity and cost eligibility, then review a Terraform plan. Preparing a plan does not deploy resources.
 
+### Read-only account readiness
+
+Before granting deployment permissions, generate a narrow inspection policy offline:
+
+```sh
+python3 -m tools.aws_readiness policy --account-id YOUR_ACCOUNT_ID
+```
+
+The generated `.data/aws-readiness-policy.json` grants seven read operations: the selected IAM user's identity and MFA registrations; account Free Tier plan/usage; and regional DynamoDB provisioned-capacity metadata and Lambda account limits. It cannot read table items, create resources, manage IAM, upgrade an account plan, or run CloudShell. An authorized administrator can review it and add it as an inline policy named `QueueRescueReadiness` on the development user. Use the console's JSON editor; do not commit the account-specific policy. Adding this access is a separate, explicit permission change.
+
+With the temporary development profile signed in, collect private evidence:
+
+```sh
+python3 -m tools.aws_readiness check --account-id YOUR_ACCOUNT_ID
+```
+
+The default CLI path is `.data/bin/aws`; pass `--aws-cli aws` for a normal installation. The command first rejects root, unexpected accounts, and unexpected IAM users. It uses only an explicit read-operation allowlist and never invokes Cost Explorer, deployment, or permission-changing APIs. Errors are recorded as unknown, and truncated capacity/offer results are marked incomplete. The report is saved to ignored `.data/aws-readiness.json` with mode 0600. Only check statuses are printed.
+
+Review the report alongside the billing console. Registering an MFA device does not prove an existing CLI session used MFA; sign in again after enrollment. Missing Free Tier offers are not proof of eligibility, and regional capacity totals do not establish account-wide allowances. In particular, [API Gateway's legacy free usage expires after 12 months](https://aws.amazon.com/api-gateway/pricing/). This tool always leaves `deployment_ready=false`: human cost/permission review remains necessary. It does not apply Terraform or guarantee a $0 bill.
+
 Build the Lambda package, then prepare a saved plan:
 
 ```sh
