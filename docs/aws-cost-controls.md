@@ -2,7 +2,7 @@
 
 The target for the first cloud demo is to avoid out-of-pocket spending. This is a constraint to verify against the account's actual plan, credits, and current usage, not something Terraform or a budget alert can guarantee. No resources should be deployed until those account details have been checked.
 
-The [cost decision worksheet](aws-cost-assessment.md) identifies metered components, lists allowance checks, and calculates a small API/S3 usage example. A complete live stack cannot be assumed to cost $0 just because most services have a free allowance.
+The [cost decision worksheet](aws-cost-assessment.md) prices the complete current minimal stack for a 25-message, one-hour demo, including setup, cleanup, retained storage and runtime sensitivity. Its offline calculator applies no unverified allowances or credits. A small estimate does not establish a zero bill or enforce a spending cap.
 
 An AWS budget is a warning threshold. It does not reserve money, prepay a service, or prevent requests from being billed. Billing and notification data are delayed; more usage can occur before a warning arrives. The stack now includes a zero-spend notification that warns about recorded usage costs before credits, plus the existing percentage notification. Neither is a real-time spending cap.
 

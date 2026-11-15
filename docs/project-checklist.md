@@ -19,10 +19,10 @@ Status reviewed November 15, 2026 against the original technical prototype and t
 
 ## 1. Resolve deployment costs — first blocker
 
-- [ ] **Me:** Produce a complete estimate for a 25-message, one-hour demonstration, including every service, retries, logs, notifications, data transfer, deployment requests, and resources retained after the hour. The existing API/S3 example is only a subtotal.
+- [x] **Me:** Complete the 25-message, one-hour demo estimate across the current minimal stack, including setup/cleanup requests, retry allowances, notifications, network, storage and 7-/30-day retention. [Worksheet and offline calculator](aws-cost-assessment.md): $0.06345450 illustrative or $0.19955518 with stressed runtimes and three total resource-hours, before tax and without allowances/credits. These are scenarios, not a cap or measured AWS cost.
 - [ ] **Me + you:** Verify the applicable account/lab plan, credits, expiry, service coverage, shared allowances, and relevant lab restrictions. A missing Free Tier usage entry is not proof that a service is free.
 - [ ] **You:** Choose strict $0 with local/offline work, verified credits/lab coverage, or an explicitly reviewed nonzero spending tolerance. The existing strict $0 requirement remains active until changed.
-- [ ] **Me:** Define demo stop conditions and retention/teardown choices. Worker kill switches do not remove storage or provisioned table charges.
+- [x] **Me:** Document proposed count/time/storage stop conditions and retention/teardown choices in the cost worksheet. Worker kill switches do not remove storage or table charges; actual deployment-specific deadlines and destructive cleanup still require review.
 - [ ] **Me + you:** Confirm notifications work and understand that they can arrive after additional usage. Do not describe an alert threshold as a hard cap.
 
 Exit: a documented cost decision that covers the complete proposed workload and retained resources. Until then, no live deployment. See [cost assessment](aws-cost-assessment.md).
