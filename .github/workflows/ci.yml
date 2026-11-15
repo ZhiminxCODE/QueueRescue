@@ -54,6 +54,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build dashboard
         run: npm run build
+      - name: Test browser authentication and AWS request safety
+        run: npm run test:frontend
 
   aws:
     name: Offline AWS adapters and recovery
