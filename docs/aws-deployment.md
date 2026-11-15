@@ -12,9 +12,9 @@ For a demo constrained by Free Tier eligibility, first read [cost controls](aws-
 - Two different email identities for the Operator and Approver. No application users or administrator memberships are created automatically.
 - Permission to create the listed sandbox resources and scoped IAM roles. Your account owner controls these permissions; no permanent vendor administrator key is required.
 
-The stack creates five Lambda functions, four standard SQS queues, three encrypted on-demand DynamoDB tables, a versioned encrypted S3 bucket, a customer-managed KMS key, a Cognito user pool/client/groups, an authenticated HTTP API, a Standard state machine, log groups, alarms, and an SNS topic. A budget and email subscription are created only when an alert email is configured. KMS, alarms, point-in-time recovery, storage, and usage can incur charges even with little traffic. There is no NAT gateway, ECS cluster, EC2 instance, or hosted frontend.
+The optional standard profile creates five Lambda functions, four standard SQS queues, three encrypted on-demand DynamoDB tables, a versioned encrypted S3 bucket, a customer-managed KMS key, a Cognito user pool/client/groups, an authenticated HTTP API, a Standard state machine, log groups, alarms, and an SNS topic. A budget and email subscription are created only when an alert email is configured. KMS, alarms, point-in-time recovery, storage, and usage can incur charges even with little traffic. There is no NAT gateway, ECS cluster, EC2 instance, or hosted frontend.
 
-That resource list describes the standard profile. The minimal profile uses fixed provisioned DynamoDB capacity, AWS-owned/service-owned encryption, and no customer-managed key, PITR, or metric alarms. It retains authenticated access, deletion protection, audit records, and controlled replay. Neither profile is a cost guarantee.
+That resource list describes the standard profile. The default minimal profile uses fixed provisioned DynamoDB capacity, AWS-owned/service-owned encryption, and no customer-managed key, PITR, or metric alarms. Consumers and replay default off. It retains authenticated access, deletion protection, audit records, and controlled replay. Neither profile is a cost guarantee.
 
 ## Account-free build and checks
 

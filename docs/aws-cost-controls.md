@@ -2,13 +2,15 @@
 
 The target for the first cloud demo is to avoid out-of-pocket spending. This is a constraint to verify against the account's actual plan, credits, and current usage, not something Terraform or a budget alert can guarantee. No resources should be deployed until those account details have been checked.
 
+The [cost decision worksheet](aws-cost-assessment.md) identifies metered components, lists allowance checks, and calculates a small API/S3 usage example. A complete live stack cannot be assumed to cost $0 just because most services have a free allowance.
+
 An AWS budget is a warning threshold. It does not reserve money, prepay a service, or prevent requests from being billed. Billing and notification data are delayed; more usage can occur before a warning arrives. The stack now includes a zero-spend notification that warns about recorded usage costs before credits, plus the existing percentage notification. Neither is a real-time spending cap.
 
 AWS Free account plans and Paid account plans have different behavior. An eligible Free plan can prevent out-of-pocket charges while active, but expires based on time or exhausted credits and restricts some services. A Paid plan can charge beyond free allowances or credits. Do not upgrade a plan merely to make this demo work without reviewing that consequence. The account's Free Tier page and credit balance are authoritative for its eligibility.
 
 ## Minimal profile for a fresh synthetic sandbox
 
-Set `cost_profile="minimal"` before the first deployment. The normal `standard` profile remains available for customer-managed key control and backups. Minimal mode:
+Fresh configuration now defaults to `cost_profile="minimal"`, `consumers_enabled=false`, and `replay_enabled=false`; the example values file does too. The optional `standard` profile remains available for customer-managed key control and backups. Minimal mode:
 
 - Uses SSE-S3 for evidence, SSE-SQS for queues, and default AWS-owned DynamoDB encryption. Data remains encrypted at rest; the stack creates no customer-managed KMS key and grants no KMS key permissions.
 - Uses three provisioned DynamoDB tables at five read and five write capacity units each, for a fixed total of 15 RCUs and 15 WCUs. There is no autoscaling. This is below the published 25/25 capacity allowance by itself, but the allowance is shared with other eligible account usage and does not establish that this account pays nothing. Capacity throttling is possible for transactional bursts; retry ambiguous API requests using the same idempotency key.
@@ -35,7 +37,7 @@ If zero charges cannot be established acceptably for the proposed demo, keep usi
 
 ## Existing stacks
 
-Minimal mode is intended for a fresh sandbox. Switching a populated standard stack can remove a KMS key, change encryption management, disable backups, and remove alarms. Existing S3 object versions may still need the old key. Do not apply a profile switch to existing encrypted evidence without a reviewed key/data migration and retention plan. Terraform moved blocks preserve the existing standard key addresses during the module's optional-key refactor; they do not make a deliberate key deletion safe.
+Minimal mode is intended for a fresh sandbox. Existing stacks must explicitly retain their current `cost_profile` and worker settings before planning with changed defaults. Switching a populated standard stack can remove a KMS key, change encryption management, disable backups, and remove alarms. Existing S3 object versions may still need the old key. Do not apply a profile switch to existing encrypted evidence without a reviewed key/data migration and retention plan. Terraform moved blocks preserve the existing standard key addresses during the module's optional-key refactor; they do not make a deliberate key deletion safe.
 
 ## Primary sources
 

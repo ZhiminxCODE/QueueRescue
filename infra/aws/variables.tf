@@ -30,7 +30,7 @@ variable "environment" {
 variable "cost_profile" {
   description = "standard uses customer-managed keys/backups; minimal uses service-owned encryption and fixed small capacity. Neither guarantees Free Tier eligibility."
   type        = string
-  default     = "standard"
+  default     = "minimal"
   validation {
     condition     = contains(["standard", "minimal"], var.cost_profile)
     error_message = "Choose standard or minimal."
@@ -39,7 +39,7 @@ variable "cost_profile" {
 variable "consumers_enabled" {
   description = "Enable source/replay consumers during an explicit demo; false stops polling and sets consumer reserved concurrency to zero."
   type        = bool
-  default     = true
+  default     = false
 }
 variable "lambda_package" {
   description = "Deterministic deployment zip produced by tools/package_aws.py."
@@ -59,7 +59,7 @@ variable "allow_destroy_evidence" {
 variable "replay_enabled" {
   description = "Kill switch: false sets the replay Lambda reserved concurrency to zero."
   type        = bool
-  default     = true
+  default     = false
 }
 variable "callback_urls" {
   type    = list(string)
@@ -77,7 +77,7 @@ variable "budget_alert_email" {
 variable "monthly_budget_usd" {
   description = "Notification threshold, not an instantaneous spending cap."
   type        = number
-  default     = 10
+  default     = 0.01
   validation {
     condition     = var.monthly_budget_usd > 0
     error_message = "Budget notification threshold must be positive."

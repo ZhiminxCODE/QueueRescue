@@ -39,16 +39,18 @@ variables {
   aws_account_id         = "123456789012"
   aws_profile            = null
   aws_region             = "us-east-1"
-  cost_profile           = "standard"
   protect_data           = true
   allow_destroy_evidence = false
-  consumers_enabled      = true
-  replay_enabled         = true
   budget_alert_email     = ""
 }
 
 run "safe_sandbox_plan" {
   command = plan
+  variables {
+    cost_profile      = "standard"
+    consumers_enabled = true
+    replay_enabled    = true
+  }
   assert {
     condition     = alltrue([for queue in aws_sqs_queue.queue : !queue.fifo_queue && queue.kms_master_key_id == aws_kms_key.application[0].arn])
     error_message = "Every queue must be standard and KMS encrypted."
@@ -92,6 +94,22 @@ run "safe_sandbox_plan" {
   assert {
     condition     = aws_lambda_function.function["consumer"].reserved_concurrent_executions == 4 && aws_lambda_function.function["replay"].reserved_concurrent_executions == 1
     error_message = "Active consumers and replay must retain their bounded reserved concurrency."
+  }
+}
+
+run "fresh_stack_defaults_are_minimal_and_idle" {
+  command = plan
+  assert {
+    condition     = length(aws_kms_key.application) == 0 && length(aws_cloudwatch_metric_alarm.function_errors) == 0 && alltrue([for table in aws_dynamodb_table.data : table.billing_mode == "PROVISIONED" && !table.point_in_time_recovery[0].enabled])
+    error_message = "Fresh defaults must avoid customer-managed keys, alarms and paid backups."
+  }
+  assert {
+    condition     = aws_lambda_function.function["consumer"].reserved_concurrent_executions == 0 && aws_lambda_function.function["replay"].reserved_concurrent_executions == 0 && alltrue([for mapping in aws_lambda_event_source_mapping.shipment : !mapping.enabled])
+    error_message = "Fresh defaults must leave polling, consumption and replay off."
+  }
+  assert {
+    condition     = var.monthly_budget_usd == 0.01 && var.protect_data && !var.allow_destroy_evidence
+    error_message = "Keep the small warning threshold and evidence protections; the warning is not a spending cap."
   }
 }
 

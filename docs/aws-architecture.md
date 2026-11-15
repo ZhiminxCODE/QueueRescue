@@ -43,9 +43,9 @@ flowchart LR
 
 ## Deployment boundaries
 
-Terraform creates isolated sandbox queues, recovery/business/audit tables, encrypted evidence storage, customer-managed KMS encryption, function roles and logs, JWT-authenticated API routes, Cognito groups, recovery orchestration, metrics alarms, and an optional budget notification. No NAT gateway, EC2, ECS, or public S3 bucket is needed.
+Terraform creates isolated sandbox queues, recovery/business/audit tables, encrypted evidence storage, function roles and logs, JWT-authenticated API routes, Cognito groups, recovery orchestration, and an optional budget notification. Fresh defaults use the minimal profile with service-owned encryption, fixed small provisioned tables and workers off. The optional standard profile adds a customer-managed KMS key, on-demand tables, PITR and metric alarms. No NAT gateway, EC2, ECS, or public S3 bucket is needed. Neither profile guarantees zero charges; see the [cost assessment](aws-cost-assessment.md).
 
-The React dashboard initially remains the local demonstration client. The AWS API is a separate authenticated backend; the demo role selector is never accepted as AWS identity. Native browser sign-in and hosted frontend deployment are separate integration work and must not be implied by successful infrastructure validation.
+The React dashboard defaults to local simulation and also supports an explicit AWS mode with Cognito PKCE sign-in and the authenticated cloud API. The demo role selector is never accepted as AWS identity. Browser workflows have been checked offline; real Cognito/CORS validation and hosted frontend deployment must not be implied by successful infrastructure validation. See [dashboard setup](dashboard-aws.md).
 
 Initial AWS plans are deliberately bounded to a small number of snapshots so operation reservations and approval consumption fit within one DynamoDB transaction. Large inventory/replay scaling is a separate milestone; the local 10,000-event planning benchmark is not an AWS throughput result.
 
@@ -53,7 +53,7 @@ Initial AWS plans are deliberately bounded to a small number of snapshots so ope
 
 Before deployment, provide the development account ID, region, local AWS profile name, budget alert email/amount, and the callback URL for eventual browser sign-in. Use synthetic messages only during initial validation. Terraform state and local deployment outputs stay out of Git.
 
-The account must permit creating scoped IAM roles, queues, tables, a KMS key, S3 storage, Lambda functions, API Gateway, Cognito, Step Functions, CloudWatch resources, and optionally AWS Budgets. The stack checks the target account before creating resources.
+The account must permit creating scoped IAM roles, queues, tables, S3 storage, Lambda functions, API Gateway, Cognito, Step Functions, CloudWatch resources, and optionally AWS Budgets. The standard profile also needs KMS permissions. The stack checks the target account before creating resources.
 
 ## Validation strategy
 
