@@ -1,4 +1,5 @@
 import json
+import io
 import os
 from pathlib import Path
 import subprocess
@@ -6,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from tools.aws_readiness import CLIReader, ReadError, inspect_account, readiness_policy, save_private_json
+from tools.aws_readiness import CLIReader, ReadError, inspect_account, main, readiness_policy, save_private_json
 
 
 ACCOUNT = '123456789012'
@@ -134,6 +135,27 @@ class ReadinessTests(unittest.TestCase):
             save_private_json(path, {'deployment_ready': False})
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
             self.assertEqual(json.loads(path.read_text()), {'deployment_ready': False})
+
+    def test_expired_cli_session_has_a_specific_safe_error(self):
+        read = CLIReader('aws', 'sandbox', 'us-east-1')
+        with patch('tools.aws_readiness.subprocess.run', return_value=subprocess.CompletedProcess(
+                [], 255, '', "Your session has expired. Please reauthenticate using 'aws login'.")):
+            with self.assertRaisesRegex(ReadError, '^ExpiredLoginSession$'):
+                read('sts', 'get-caller-identity')
+
+    def test_expired_login_handoff_does_not_replace_existing_evidence(self):
+        error_output = io.StringIO()
+        with patch('sys.argv', ['aws_readiness', 'check', '--account-id', ACCOUNT]), \
+             patch('tools.aws_readiness.CLIReader') as reader, \
+             patch('tools.aws_readiness.save_private_json') as save, \
+             patch('sys.stderr', error_output):
+            reader.return_value.side_effect = ReadError('ExpiredLoginSession')
+            with self.assertRaises(SystemExit) as stopped:
+                main()
+            self.assertEqual(stopped.exception.code, 2)
+            save.assert_not_called()
+        self.assertIn('aws login', error_output.getvalue())
+        self.assertNotIn('Traceback', error_output.getvalue())
 
 
 if __name__ == '__main__':

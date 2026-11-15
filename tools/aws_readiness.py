@@ -87,6 +87,8 @@ class CLIReader:
             raise ReadError('CLIUnavailableOrTimedOut') from None
         if result.returncode:
             # Record only the AWS error code, never raw stderr or credentials.
+            if re.search(r'session (?:has )?expired', result.stderr, re.IGNORECASE):
+                raise ReadError('ExpiredLoginSession')
             match = re.search(r'\(([A-Za-z0-9_.-]+)\)', result.stderr)
             raise ReadError(match.group(1) if match else 'CLIRequestFailed')
         try:
@@ -200,14 +202,19 @@ def main():
     parser.add_argument('--aws-cli', default='.data/bin/aws')
     parser.add_argument('--output', help='Private local JSON file; do not add it to Git')
     args = parser.parse_args()
-    validate_target(args.account_id, args.user_name, args.region)
-    if args.command == 'policy':
-        path = args.output or '.data/aws-readiness-policy.json'
-        value = readiness_policy(args.account_id, args.user_name, args.region)
-    else:
-        path = args.output or '.data/aws-readiness.json'
-        value = inspect_account(CLIReader(args.aws_cli, args.profile, args.region),
-                                args.account_id, args.user_name, args.region)
+    try:
+        validate_target(args.account_id, args.user_name, args.region)
+        if args.command == 'policy':
+            path = args.output or '.data/aws-readiness-policy.json'
+            value = readiness_policy(args.account_id, args.user_name, args.region)
+        else:
+            path = args.output or '.data/aws-readiness.json'
+            value = inspect_account(CLIReader(args.aws_cli, args.profile, args.region),
+                                    args.account_id, args.user_name, args.region)
+    except (ReadError, ValueError) as error:
+        detail = ('AWS session expired. Refresh the reviewed non-root profile with aws login.'
+                  if str(error) == 'ExpiredLoginSession' else str(error))
+        parser.exit(2, 'Readiness check stopped: ' + detail + '\nNo report was updated.\n')
     save_private_json(path, value)
     print('Saved private', args.command, 'output to', path)
     if args.command == 'check':
