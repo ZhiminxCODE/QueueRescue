@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "description": "Labeled offline shipment incidents; no real account, billing data or customer payloads.",
+  "cases": [
+    {"id": "before_effect_recovered_and_duplicate", "messages": [{"operation": "shipment:o1"}, {"operation": "shipment:o1"}], "outcomes": {"shipment:o1": "NOT_STARTED"}, "action": "recover", "logOutcome": "TIMEOUT_BEFORE", "expected": {"recovered": 1, "skipped": 1, "blocked": 0, "unresolved": 0}},
+    {"id": "after_effect_already_complete", "messages": [{"operation": "shipment:o1"}], "outcomes": {"shipment:o1": "COMPLETE"}, "action": "plan", "logOutcome": "TIMEOUT_AFTER", "expected": {"recovered": 0, "skipped": 1, "blocked": 0, "unresolved": 0}},
+    {"id": "invalid_schema", "messages": [{"invalid": true}], "outcomes": {}, "action": "none", "expected": {"recovered": 0, "skipped": 0, "blocked": 1, "unresolved": 0}},
+    {"id": "verifier_unknown", "messages": [{"operation": "shipment:o1"}], "outcomes": {"shipment:o1": "UNKNOWN"}, "action": "plan", "expected": {"recovered": 0, "skipped": 0, "blocked": 0, "unresolved": 1}},
+    {"id": "uncertain_transport", "messages": [{"operation": "shipment:o1"}], "outcomes": {"shipment:o1": "NOT_STARTED"}, "action": "uncertain", "expected": {"recovered": 0, "skipped": 0, "blocked": 0, "unresolved": 1}},
+    {"id": "cancelled_then_late_proof", "messages": [{"operation": "shipment:o1"}], "outcomes": {"shipment:o1": "NOT_STARTED"}, "action": "late_verify", "expected": {"recovered": 1, "skipped": 0, "blocked": 0, "unresolved": 0}},
+    {"id": "mixed_dispositions", "messages": [{"operation": "shipment:o1"}, {"operation": "shipment:o1"}, {"operation": "shipment:o2", "attributeConflict": true}, {"operation": "shipment:o3"}], "outcomes": {"shipment:o1": "NOT_STARTED", "shipment:o2": "NOT_STARTED", "shipment:o3": "UNKNOWN"}, "action": "recover", "expected": {"recovered": 1, "skipped": 1, "blocked": 1, "unresolved": 1}}
+  ]
+}

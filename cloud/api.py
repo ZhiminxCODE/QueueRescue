@@ -12,12 +12,14 @@ from cloud.log_evidence import lookup
 from cloud.recovery import approve_plan, control_job, create_plan, ensure_execution, job_detail, required, start_job, verify_job
 from cloud.telemetry import emit, reference
 from cloud.retention import describe, queue_retention, require_snapshot_access
+from cloud.reports import report as incident_report
+from cloud.report_costs import record_cost
 
 
 def route(repo, event):
     method = event.get("requestContext", {}).get("http", {}).get("method", "")
     path = event.get("rawPath", "").removeprefix("/api")
-    permission = "read" if method == "GET" else "approve" if path.endswith("/approve") else "operate"
+    permission = "read" if method == "GET" else "admin" if path.startswith("/incidents/") and path.endswith("/cost-observations") else "approve" if path.endswith("/approve") else "operate"
     actor = actor_from_gateway(event, permission)
     q = event.get("queryStringParameters") or {}
     if method == "GET":
@@ -32,6 +34,8 @@ def route(repo, event):
             parts = path.strip("/").split("/")
             if len(parts) == 3 and parts[2] == "messages":
                 return browse(repo, q, incident_id=parts[1])
+            if len(parts) == 3 and parts[2] == "report":
+                return incident_report(repo, parts[1], q)
             if len(parts) == 2:
                 return incident_detail(repo, parts[1])
             raise CloudProblem(404, "Route not found")
@@ -104,6 +108,11 @@ def route(repo, event):
         if path == "/replay-jobs" or path.endswith("/resume"):
             cached["executionArn"] = ensure_execution(repo, cached)
         return cached
+    if path.startswith("/incidents/") and path.endswith("/cost-observations"):
+        parts = path.strip("/").split("/")
+        if len(parts) != 3:
+            raise CloudProblem(404, "Route not found")
+        return record_cost(repo, actor, parts[1], data, request)
     if path == "/collections":
         if data.get("acknowledgeVisibilityChange") is not True:
             raise CloudProblem(400, "Explicitly acknowledge collection visibility changes")

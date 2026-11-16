@@ -3,6 +3,7 @@ import time
 
 from cloud.aws import condition, new_item, update, wire
 from cloud.contracts import CloudProblem, MAX_PLAN_MESSAGES, encode, sha, validate_event
+from cloud.report_index import incident_links, link_writes
 
 
 ATTEMPT_STATES = ["QUEUED", "LEASED", "SENT", "UNCERTAIN", "REVIEW", "SKIPPED", "VERIFIED", "UNVERIFIED", "CANCELLED", "FAILED"]
@@ -45,11 +46,12 @@ def create_plan(repo, actor, data, request):
         raise CloudProblem(400, "Sandbox rate must be an integer from 1–25 messages/sec")
     if data.get("destination", repo.settings.replay_queue_url) != repo.settings.replay_queue_url:
         raise CloudProblem(403, "Destination is not allowlisted")
-    seen, decisions = set(), []
+    seen, decisions, messages = set(), [], []
     for identifier in identifiers:
         message = repo.get(repo.queue_pk, "MSG#" + identifier)
         if not message or message["expires_at"] <= int(repo.clock()):
             raise CloudProblem(404, "Snapshot is missing or expired")
+        messages.append(message)
         decision, reason = classify(repo, message)
         operation = message.get("operationId")
         if decision == "ELIGIBLE" and operation in seen:
@@ -63,10 +65,12 @@ def create_plan(repo, actor, data, request):
     document = {"id": identifier, "version": 1, "createdAt": now, "expiresAt": now + 3600,
                 "rate": rate, "destination": repo.settings.replay_queue_url,
                 "consumerVersion": repo.settings.consumer_version, "idempotencyContract": "operationId-unique", "decisions": decisions}
-    item = {"pk": "PLAN#" + identifier, "sk": "META", "state": "READY", "createdBy": actor["id"],
+    links = incident_links(repo, messages)
+    item = {"pk": "PLAN#" + identifier, "sk": "META", "state": "READY", "createdBy": actor["id"], "incidentLinks": links,
             "document": document, "planHash": sha(encode(document)), "expiresAt": document["expiresAt"]}
     response = {"id": identifier, "state": "READY", "planHash": item["planHash"], "document": document}
-    repo.commit([new_item(repo.table, item), new_item(repo.table, {"pk":"CATALOG#PLAN","sk":identifier,"id":identifier})], actor["id"], "PLAN_CREATED", identifier, request=request, response=response)
+    repo.commit([new_item(repo.table, item), new_item(repo.table, {"pk":"CATALOG#PLAN","sk":identifier,"id":identifier}),
+                 *link_writes(repo, links, "PLAN", identifier)], actor["id"], "PLAN_CREATED", identifier, request=request, response=response)
     return response
 
 
@@ -106,6 +110,9 @@ def start_job(repo, actor, data, request):
            "planHash":plan["planHash"],"state":"RUNNING","generation":0,"cursor":0,"createdAt":now,"updatedAt":now}
     actions = [new_item(repo.table, job), new_item(repo.table, {"pk":"CATALOG#JOB","sk":identifier,"id":identifier}), update(repo.table, {"pk":plan["pk"],"sk":"META"}, "SET #state=:executing",
         "#state=:approved AND expiresAt>:now AND planHash=:hash", {":executing":"EXECUTING",":approved":"APPROVED",":now":now,":hash":plan["planHash"]}, {"#state":"state"})]
+    eligible_ids = {d["messageId"] for d in plan["document"]["decisions"] if d["decision"] == "ELIGIBLE"}
+    job_links = [link for link in plan.get("incidentLinks", []) if eligible_ids.intersection(link["messageIds"])]
+    actions.extend(link_writes(repo, job_links, "JOB", identifier, plan["document"]["id"]))
     for decision in plan["document"]["decisions"]:
         if decision["decision"] != "ELIGIBLE":
             continue
@@ -187,7 +194,8 @@ def verify_job(repo, actor, identifier, request=None):
     target = job["state"]
     if target in {"VERIFYING","PARTIAL"}:
         target = "COMPLETED" if all(a["state"] in {"VERIFIED","SKIPPED"} for a in attempts) else "PARTIAL"
-    actions.append(update(repo.table, {"pk":job["pk"],"sk":"META"}, "SET #state=:target,updatedAt=:now", "#state=:old AND generation=:generation",
+    resolution = ",resolvedAt=if_not_exists(resolvedAt,:now)" if attempts and all(a["state"] in {"VERIFIED", "SKIPPED"} for a in attempts) else ""
+    actions.append(update(repo.table, {"pk":job["pk"],"sk":"META"}, "SET #state=:target,updatedAt=:now" + resolution, "#state=:old AND generation=:generation",
         {":target":target,":now":int(repo.clock()),":old":job["state"],":generation":job["generation"]}, {"#state":"state"}))
     response = {"id":identifier,"state":target,"counts":{s:sum(a["state"]==s for a in attempts) for s in ATTEMPT_STATES}}
     repo.commit(actions, actor["id"], "OUTCOMES_VERIFIED", identifier, request=request, response=response)

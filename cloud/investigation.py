@@ -16,7 +16,7 @@ MESSAGE_FIELDS = ("id", "operationId", "valid", "error", "errorCategory", "incid
                   "evidenceChecksum", "originalMessageId", "observedAt", "sourceSentAt", "expires_at",
                   "messageRef", "operationRef", "correlationRef")
 INCIDENT_FIELDS = ("id", "signature", "category", "label", "consumerVersion", "windowStart", "windowEnd",
-                   "groupingVersion", "expires_at", "collectedCount")
+                   "groupingVersion", "expires_at", "collectedCount", "reportIndexVersion")
 
 
 def public_incident(row):
@@ -34,10 +34,10 @@ def incident_writes(repo, item):
     start = item["observedAt"] // WINDOW_SECONDS * WINDOW_SECONDS
     signature = sha(encode([1, repo.queue_pk, repo.settings.consumer_version, category(item)]))
     identifier = sha(encode([signature, start]))
-    item.update(incidentId=identifier, errorCategory=category(item))
+    item.update(incidentId=identifier, errorCategory=category(item), reportIndexVersion=1)
     summary = {"id": identifier, "signature": signature, "category": category(item),
                "label": CATEGORIES[category(item)], "consumerVersion": repo.settings.consumer_version,
-               "windowStart": start, "windowEnd": start + WINDOW_SECONDS, "groupingVersion": 1,
+               "windowStart": start, "windowEnd": start + WINDOW_SECONDS, "groupingVersion": 1, "reportIndexVersion": 1,
                "expires_at": start + WINDOW_SECONDS + repo.settings.retention_days * 86400}
     names = {"#" + key: key for key in summary}
     values = {":" + key: value for key, value in summary.items()}
