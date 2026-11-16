@@ -46,7 +46,8 @@ After creating a plan, sign out/change application account, then sign in as the 
 - Catalog endpoints return IDs, not complete plan/job objects. The dashboard fetches selected details separately and uses the backend's field names and state transitions.
 - Mutation intent (route, body, actor, key, and timestamp) is saved before sending. An unavailable/ambiguous response blocks new mutations and offers **Retry same request**. Reloads and re-authentication retain the original key; a different actor cannot retry it. Requests older than six days require administrator reconciliation rather than risking the server's seven-day cache expiry. Do not clear this storage to bypass an unresolved request.
 - Calls use the pinned regional HTTPS endpoint, omit cookies, refuse redirects, and bound network waits. A 401 returns to sign-in. No tokens appear in URLs, exports, or diagnostic notices.
-- Audit exports contain the current server page; job exports are ledger snapshots, not complete incident reports. The UI does not claim cloud hash-chain validation, complete inventory, correlated CloudWatch evidence, or live worker availability.
+- Snapshot inspection and each replay-attempt row offer explicit CloudWatch evidence lookup. Opening a dialog does not query logs. Lookups accept a bounded local-time window, display per-source coverage and inconclusive results, and link only to returned log streams. Log evidence never changes business-verification counts. [Contract and offline verification](cloud-log-evidence.md).
+- Audit exports contain the current server page; job exports are ledger snapshots, not complete incident reports. The UI does not claim cloud hash-chain validation, complete inventory, distributed traces, independently confirmed root causes, or live worker availability.
 
 ## Verification
 

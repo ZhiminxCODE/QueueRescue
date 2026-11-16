@@ -1,4 +1,4 @@
-const readPaths = /^\/(session|connections|messages(?:\/[A-Za-z0-9_-]+)?|incidents(?:\/[a-f0-9]{64}(?:\/messages)?)?|replay-plans(?:\/[A-Za-z0-9_-]+)?|replay-jobs(?:\/[A-Za-z0-9_-]+)?|audit)$/;
+const readPaths = /^\/(session|connections|messages(?:\/[A-Za-z0-9_-]+(?:\/evidence)?)?|incidents(?:\/[a-f0-9]{64}(?:\/messages)?)?|replay-plans(?:\/[A-Za-z0-9_-]+)?|replay-jobs(?:\/[A-Za-z0-9_-]+)?|audit)$/;
 const writePaths = /^\/(collections|replay-plans(?:\/[A-Za-z0-9_-]+\/approve)?|replay-jobs(?:\/[A-Za-z0-9_-]+\/(?:pause|resume|cancel))?|verifications)$/;
 
 export class APIError extends Error {

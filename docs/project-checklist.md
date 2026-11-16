@@ -1,6 +1,6 @@
 # QueueRescue completion checklist
 
-Status reviewed November 15, 2026 against the original technical prototype and the current repository. Checked items mean the stated implementation or offline verification is complete; they do not imply a successful AWS deployment. The full visual design remains deferred as requested.
+Status reviewed November 16, 2026 against the original technical prototype and the current repository. Checked items mean the stated implementation or offline verification is complete; they do not imply a successful AWS deployment. The full visual design remains deferred as requested.
 
 ## Completed foundation
 
@@ -15,7 +15,7 @@ Status reviewed November 15, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest implementation checks passed: 124 Python tests, 14 frontend tests, and frontend build. Six mocked Terraform plans passed at the previous infrastructure milestone. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 139 Python tests, 17 frontend tests, frontend build, deterministic Lambda packaging, Terraform validation and six mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## 1. Resolve deployment costs — first blocker
 
@@ -54,7 +54,7 @@ Exit: a recorded real-account demonstration with confirmed safeguards and observ
 ## 4. Finish the investigation/reporting features from the brief
 
 - [x] **Me:** Add cloud incident records and normalized schema-category grouping, with server-side filtering, bounded pagination and dashboard group drill-down. [Contract and offline verification](cloud-investigation.md). Groups are indexed samples, not confirmed root causes or a complete queue inventory; no automatic legacy backfill.
-- [ ] **Me:** Add structured correlation IDs/instrumentation and scoped CloudWatch evidence lookup; show actual log/trace links and mark missing/inconclusive evidence honestly.
+- [x] **Me:** Add structured correlation instrumentation and scoped CloudWatch evidence lookup for source messages and exact replay attempts, with explicit dashboard lookup, returned log-stream links, and incomplete/missing/denied states. [Contract and offline verification](cloud-log-evidence.md). Distributed traces remain uninstrumented; no trace links are invented. Real-account evidence and console-link validation still require the reviewed deployment milestone.
 - [ ] **Me:** Show DLQ age/retention warnings before source evidence expires, with snapshot permissions and retention behavior tested.
 - [ ] **Me:** Implement a complete cloud post-incident report: evidence-backed hypotheses, recovered/skipped/blocked/unresolved counts, duration, verification coverage, and measured cost. Current cloud exports are plan/job snapshots and audit pages.
 - [ ] **Me:** Add representative labeled incident fixtures and test grouping/correlation/report behavior.

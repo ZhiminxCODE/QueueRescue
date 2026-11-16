@@ -40,7 +40,7 @@ Filtering happens on the server over bounded DynamoDB partition queries, not a n
 
 Responses include `items`, `nextCursor`, `evaluatedCount`, `readBudgetReached`, and `scope: INDEXED_SNAPSHOTS`. An empty page with a continuation is not the end of the search: use Next. The dashboard displays this condition and resets pagination when filters or routes change. Lists are live reads, not a frozen inventory; concurrent inserts and retention can change subsequent pages.
 
-Browsing lists never receives from SQS, invokes a consumer/verifier, or fetches S3 bodies. Inspecting a message deliberately uses the existing masked evidence route. Grouping does not alter approval, operation reservations, replay, or business-verification requirements. Real CloudWatch correlation, retention warnings and complete post-incident reports remain separate milestones.
+Browsing lists never receives from SQS, invokes a consumer/verifier, or fetches S3 bodies. Inspecting a message deliberately uses the existing masked evidence route. Grouping does not alter approval, operation reservations, replay, or business-verification requirements. [Scoped CloudWatch correlation](cloud-log-evidence.md) is implemented and verified offline as a separate explicit lookup. Retention warnings and complete post-incident reports remain separate milestones, and live-account validation is still required.
 
 ## Verification
 
