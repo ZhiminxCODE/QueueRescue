@@ -38,4 +38,11 @@
 .cloud-log-evidence a { color: #166b5c; white-space: nowrap; }
 .cloud-evidence-window { display: flex; gap: 16px; flex-wrap: wrap; }
 .cloud-evidence-window label { min-width: 230px; flex: 1; }
+.cloud-retention-cell { min-width: 210px; line-height: 1.6; }
+.cloud-retention-detail { border-top: 1px solid #e5e7eb; margin-top: 24px; padding-top: 12px; }
+.cloud-retention-detail p { line-height: 1.7; margin: 12px 0; }
+.cloud-retention-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+.cloud-retention-cards > div { padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
+.cloud-retention-cards h4 { margin-bottom: 12px; }
+.cloud-retention-warning { background: #fffaf0; border-color: #e5b86c !important; }
 @media (max-width: 800px) { .cloud-steps { grid-template-columns: 1fr; } .cloud-steps > button { border-right: 0; border-bottom: 1px solid #e5e7eb; } .cloud-identity { max-width: 100px; } .cloud-refresh-bar { align-items: flex-start; } .cloud-login-card { padding: 25px; } }

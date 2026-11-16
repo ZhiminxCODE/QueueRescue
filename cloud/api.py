@@ -11,6 +11,7 @@ from cloud.investigation import browse, incident_detail
 from cloud.log_evidence import lookup
 from cloud.recovery import approve_plan, control_job, create_plan, ensure_execution, job_detail, required, start_job, verify_job
 from cloud.telemetry import emit, reference
+from cloud.retention import describe, queue_retention, require_snapshot_access
 
 
 def route(repo, event):
@@ -58,12 +59,27 @@ def route(repo, event):
             message = repo.get(repo.queue_pk, "MSG#" + identifier)
             if not message:
                 raise CloudProblem(404, "Snapshot not found")
-            snapshot = repo.evidence(message["evidenceKey"], message["evidenceChecksum"])
+            require_snapshot_access(message, int(repo.clock()))
+            try:
+                snapshot = repo.evidence(message["evidenceKey"], message["evidenceChecksum"])
+            except ClientError as error:
+                code = error.response.get("Error", {}).get("Code")
+                if code in {"NoSuchKey", "NoSuchVersion", "404"}:
+                    raise CloudProblem(410, "Snapshot evidence is no longer available in storage") from error
+                if code in {"AccessDenied", "AccessDeniedException", "403"}:
+                    raise CloudProblem(503, "Snapshot storage access is unavailable; payload inspection could not be authorized") from error
+                raise
+            require_snapshot_access(message, int(repo.clock()))
             try:
                 payload = mask(json.loads(snapshot["body"]))
             except ValueError:
                 payload = "[MALFORMED PAYLOAD REDACTED]"
-            return {**message,"payload":payload,"originalsRetained":True}
+            observation = queue_retention(repo)
+            now = int(repo.clock())
+            require_snapshot_access(message, now)
+            retention = describe(message, observation, now)
+            retention["snapshot"]["availability"] = "READ_SUCCEEDED"
+            return {**message,"payload":payload,"sourceDeletionPerformed":False,"originalPresence":"UNVERIFIED","retention":retention}
         if path.startswith("/replay-plans/"):
             return required(repo, "PLAN#" + path.split("/")[2])
         if path.startswith("/replay-jobs/"):

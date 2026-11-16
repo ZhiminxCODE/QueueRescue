@@ -109,6 +109,22 @@ run "safe_sandbox_plan" {
     condition     = contains(flatten([for statement in jsondecode(aws_iam_role_policy.function["api"].policy).Statement : statement.Action]), "logs:FilterLogEvents") && alltrue([for policy in aws_iam_role_policy.function : !contains(flatten([for statement in jsondecode(policy.policy).Statement : statement.Action]), "logs:Unmask") && !contains(flatten([for statement in jsondecode(policy.policy).Statement : statement.Action]), "logs:StartQuery")])
     error_message = "Scoped filtering must be present without unmasking or Logs Insights permissions."
   }
+  assert {
+    condition = length([for statement in jsondecode(aws_iam_role_policy.function["api"].policy).Statement : statement if contains(statement.Action, "sqs:GetQueueAttributes")]) == 1 && alltrue([
+      for statement in jsondecode(aws_iam_role_policy.function["api"].policy).Statement :
+      statement.Resource == aws_sqs_queue.queue["source-dlq"].arn && statement.Action == ["sqs:GetQueueAttributes"]
+      if contains(statement.Action, "sqs:GetQueueAttributes")
+    ]) && !contains(flatten([for statement in jsondecode(aws_iam_role_policy.function["api"].policy).Statement : statement.Action]), "sqs:ReceiveMessage") && !contains(flatten([for statement in jsondecode(aws_iam_role_policy.function["api"].policy).Statement : statement.Action]), "sqs:DeleteMessage")
+    error_message = "Retention inspection may only read the configured DLQ's attributes, without receive/delete permission."
+  }
+  assert {
+    condition = alltrue([for key in ["api", "collector", "replay"] : alltrue([
+      for statement in jsondecode(aws_iam_role_policy.function[key].policy).Statement :
+      statement.Resource == "${aws_s3_bucket.evidence.arn}/evidence/*" && statement.Action == ["s3:GetObject"]
+      if contains(statement.Action, "s3:GetObject")
+    ])]) && one(one(aws_s3_bucket_lifecycle_configuration.evidence.rule).expiration).days == 7 && one(one(aws_s3_bucket_lifecycle_configuration.evidence.rule).noncurrent_version_expiration).noncurrent_days == 1
+    error_message = "Snapshot reads stay scoped to the evidence prefix; retention warnings must not extend current/noncurrent evidence retention."
+  }
 }
 
 run "fresh_stack_defaults_are_minimal_and_idle" {

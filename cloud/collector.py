@@ -3,6 +3,7 @@ from cloud.aws import runtime
 from cloud.contracts import CloudProblem, sha, validate_event
 from cloud.investigation import incident_writes
 from cloud.telemetry import emit, message_refs, queue_arn, reference
+from cloud.retention import sent_seconds
 
 
 def collect(repo):
@@ -30,7 +31,7 @@ def collect(repo):
             item = {"pk": repo.queue_pk, "sk": "MSG#" + identifier, "id": identifier,
                     "operationId": operation, "valid": valid, "error": error, "checksum": snapshot["checksum"],
                     "evidenceKey": key, "evidenceChecksum": evidence_checksum, "originalMessageId": message["MessageId"], "observedAt": observed_at,
-                    "sourceSentAt": int(message.get("Attributes", {}).get("SentTimestamp", "0")) // 1000,
+                    "sourceSentAt": sent_seconds(message.get("Attributes", {}).get("SentTimestamp")),
                     "expires_at": observed_at + repo.settings.retention_days * 86400}
             item.update(message_refs(message["MessageId"], operation, snapshot["messageAttributes"]))
             try:

@@ -5,6 +5,7 @@ import re
 
 from cloud.aws import new_item, wire
 from cloud.contracts import CloudProblem, encode, sha
+from cloud.retention import describe, queue_retention
 
 
 CATEGORIES = {"UNCLASSIFIED": "Unclassified failure", "INVALID_SCHEMA": "Invalid shipment schema"}
@@ -132,7 +133,8 @@ def browse(repo, q, incidents=False, incident_id=None):
     scope = sha(encode([pk, prefix, filters]))
     cursor = read_cursor(q.get("cursor"), scope, pk, prefix)
     items, evaluated = [], 0
-    now = repo.clock()
+    retention = queue_retention(repo) if not incidents else None
+    now = int(repo.clock())
     next_key = None
     for _ in range(MAX_QUERY_PAGES):
         rows, continuation = repo.query(pk, prefix, limit=QUERY_PAGE_SIZE, cursor=cursor)
@@ -144,6 +146,7 @@ def browse(repo, q, incidents=False, incident_id=None):
                 if not incidents:
                     public["errorCategory"] = category(row)
                     public["error"] = "InvalidSchema" if category(row) == "INVALID_SCHEMA" else "UnclassifiedFailure"
+                    public["retention"] = describe(row, retention, now)
                 items.append(public)
             if len(items) == limit:
                 # Resume after the last examined row, not the fetched page end;

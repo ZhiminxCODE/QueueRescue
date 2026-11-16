@@ -137,6 +137,8 @@ Collection invokes a separately scoped Lambda. It samples at most ten DLQ messag
 
 The inbox supports server-side metadata filters and incident groups at `/incidents` and `/incidents/INCIDENT_ID/messages`. Empty bounded-search pages can have a continuation; preserve filters when following it. Groups describe indexed schema categories and collection windows, not confirmed consumer exceptions. See the [investigation contract](cloud-investigation.md) for bounds, retention and legacy-snapshot behavior.
 
+Retention warnings read only the configured DLQ's retention period/ARN, once per message-list/member-list read or successful snapshot inspection. They estimate expiry from original standard-SQS enqueue time and keep original presence unverified. Snapshot access has a separate enforced deadline, with safe errors for expired, missing or inaccessible evidence. The prepared API role adds only scoped `sqs:GetQueueAttributes`; review this permission with the deployment plan. See the [retention contract](cloud-retention.md).
+
 ## Plan, approve, execute, and verify
 
 Create `.data/plan.json` with explicit indexed snapshot IDs, a controlled rate, and no arbitrary destination:

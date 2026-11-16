@@ -25,6 +25,7 @@ locals {
   evidence_read = { Effect = "Allow", Action = ["s3:GetObject"], Resource = "${aws_s3_bucket.evidence.arn}/evidence/*" }
   policies = {
     api = [local.ledger_write, local.audit_append, local.evidence_read,
+      { Effect = "Allow", Action = ["sqs:GetQueueAttributes"], Resource = aws_sqs_queue.queue["source-dlq"].arn },
       { Effect = "Allow", Action = ["logs:FilterLogEvents"], Resource = [
         "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.prefix}-consumer:*",
         "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.prefix}-replay:*"
