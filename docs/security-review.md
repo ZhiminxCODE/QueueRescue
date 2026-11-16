@@ -26,9 +26,9 @@ AWS documents [required versus optional MFA and first-sign-in exceptions](https:
 
 ## Dependency and verification results
 
-- `npm audit --json`: zero reported advisories across 51 installed dependency entries, including development/optional dependencies.
+- `npm audit --json`: zero reported advisories across 51 reported dependency entries, including development/optional dependencies.
 - [OSV querybatch](https://google.github.io/osv.dev/api/) against the 23 distinct pinned PyPI runtime/test package versions: no reported advisories. `pip check`: no broken requirements. These are dated advisory snapshots, not proof that dependencies have no vulnerabilities; rerun before deployment.
-- Full Python safety/HTTP/offline AWS suite passed (169 tests at the review checkpoint); an additional HTTP CSP/privacy-header test and the static-policy test passed after the final header change.
+- Full Python safety/HTTP/offline AWS suite passed: 170 tests, including the final HTTP CSP/privacy-header test and static-policy test.
 - Frontend: 26 tests passed; local production build and a separate AWS-mode build using synthetic public endpoints passed. The emitted connection manifests matched each mode. Existing lucide directive warnings are nonblocking.
 - Terraform formatting and schema validation passed; all 12 mocked-provider plans passed. Lambda packaging from pinned requirements passed. Mocking does not establish real IAM authorization, account quota, service behavior or billing.
 

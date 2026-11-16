@@ -8,7 +8,7 @@ Status reviewed November 16, 2026 against the original technical prototype and t
 - [x] Masked inspection, local failure filtering/grouping, dry-run plans, separate approval, and local reports.
 - [x] Immutable plan hashes/expiry, operation reservations, idempotent mutations, bounded replay, pause/resume/cancel, and conservative business verification.
 - [x] Independent simulated consumer, restart recovery, and crash-after-send / crash-after-effect tests.
-- [x] A reproducible 10,000-event local planning benchmark. This is not a measured AWS benchmark or a complete browser performance report.
+- [x] A reproducible 10,000-event local planning benchmark, plus a [measured local backend/browser report](benchmark-report.md). This is not a measured AWS benchmark.
 - [x] AWS collector, encrypted snapshots, DynamoDB ledger, SQS/Lambda shipment demonstration, verifier, and Standard Step Functions worker implemented and tested offline.
 - [x] Terraform, deterministic Lambda packaging, dependency locks, GitHub CI, and deployment/teardown documentation.
 - [x] AWS dashboard mode: Cognito PKCE, server-provided roles, explicit selection, separate approval, jobs, audit, connections, manual refresh, and persisted same-key request recovery.
@@ -66,7 +66,7 @@ This work can be implemented and tested offline while account blockers are resol
 - [ ] **Me:** Implement the brief's private S3 + CloudFront frontend hosting, including SPA callback routing, HTTPS and restricted bucket access, after its costs are reviewed. Current AWS dashboard hosting is local.
 - [ ] **Me:** Review CloudTrail coverage and protected audit retention; implement the approved configuration without implying application audit records are tamper-proof against account administrators.
 - [x] **Me:** Review role escalation, queue access, snapshot masking, CORS/auth, retention and dependencies; fix the material offline findings. [Review, fixes, verification and remaining deployment checks](security-review.md). Real IAM/MFA/CORS enforcement, CloudTrail/protected audit retention and account cost gates remain unverified in AWS.
-- [ ] **Me:** Measure the 10,000-event local benchmark and browser responsiveness, then produce a benchmark report. Any AWS load test requires a separate cost-reviewed workload; initial cloud plans remain limited to 25 messages.
+- [x] **Me:** Measure five fresh 10,000-event local backend trials and five production-browser interaction cycles; document the method, results, zero-send checks and scaling limits in the [benchmark report](benchmark-report.md). Browser timings are scripted action-to-ready measurements, not INP or AWS throughput. Any AWS load test requires a separate cost-reviewed workload; initial cloud plans remain limited to 25 messages.
 - [ ] **Me + you:** Rehearse the final demonstration and review the evidence, known limitations, cost/operations runbook, and recovery procedures.
 - [ ] **Me + you:** Rehearse a reviewed teardown/retention procedure; confirm which data/resources remain and their possible ongoing costs.
 - [ ] **Me:** Finish architecture write-up, reproducible setup instructions, measured results and a short demo recording/walkthrough.

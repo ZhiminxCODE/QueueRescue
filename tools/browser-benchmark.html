@@ -1,0 +1,9 @@
+<style>aside[aria-label="Local browser benchmark"] {padding:24px;margin-left:238px;background:white;position:relative;z-index:2;border-bottom:1px solid #ddd} #summary {width:650px;border-collapse:collapse} #summary th,#summary td {padding:6px 14px;text-align:left;border-bottom:1px solid #ddd} #results {max-height:400px;overflow:auto}@media(max-width:900px){aside[aria-label="Local browser benchmark"]{margin-left:0}}</style>
+<aside aria-label="Local browser benchmark">
+<h1>Local browser benchmark</h1>
+<p>Five scripted DOM interaction cycles on 10,000 local events; unapproved dry runs only. Timings end after the expected DOM result and two animation frames. This measures neither native input latency nor INP or AWS.</p>
+<button id="run">Run five local cycles</button>
+<p id="status">Ready. Keep this tab visible while measuring.</p>
+<table id="summary"><thead><tr><th>Action</th><th>Samples</th><th>Median ms</th><th>p95 ms</th></tr></thead><tbody></tbody></table>
+<details><summary>Raw benchmark JSON</summary><pre id="results" aria-label="Benchmark results"></pre></details>
+</aside>
