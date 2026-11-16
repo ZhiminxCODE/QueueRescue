@@ -1,8 +1,7 @@
 """Explicitly opted-in DLQ receive and encrypted snapshot; never deletes messages."""
-import time
-
-from cloud.aws import new_item, runtime
+from cloud.aws import runtime
 from cloud.contracts import CloudProblem, sha, validate_event
+from cloud.investigation import incident_writes
 
 
 def collect(repo):
@@ -23,16 +22,18 @@ def collect(repo):
             evidence_checksum = repo.put_evidence(key, snapshot)
             try:
                 operation = validate_event(message["Body"])["operationId"]
-                valid, error = True, "WarehouseTimeout"
+                valid, error = True, "UnclassifiedFailure"
             except CloudProblem:
                 operation, valid, error = None, False, "InvalidSchema"
+            observed_at = int(repo.clock())
             item = {"pk": repo.queue_pk, "sk": "MSG#" + identifier, "id": identifier,
                     "operationId": operation, "valid": valid, "error": error, "checksum": snapshot["checksum"],
-                    "evidenceKey": key, "evidenceChecksum": evidence_checksum, "originalMessageId": message["MessageId"], "observedAt": int(time.time()),
+                    "evidenceKey": key, "evidenceChecksum": evidence_checksum, "originalMessageId": message["MessageId"], "observedAt": observed_at,
                     "sourceSentAt": int(message.get("Attributes", {}).get("SentTimestamp", "0")) // 1000,
-                    "expires_at": int(time.time()) + repo.settings.retention_days * 86400}
+                    "expires_at": observed_at + repo.settings.retention_days * 86400}
             try:
-                repo.commit([new_item(repo.table, item)], "collector", "SNAPSHOT_INDEXED", identifier)
+                repo.commit(incident_writes(repo, item), "collector", "SNAPSHOT_INDEXED", identifier,
+                            detail={"incidentId": item["incidentId"]})
             except CloudProblem:
                 if not repo.get(repo.queue_pk, item["sk"]):
                     raise

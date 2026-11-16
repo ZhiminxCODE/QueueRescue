@@ -19,16 +19,25 @@ function download(value, name) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
   const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function usePage(client, path, revision, report) {
-  const [cursors, setCursors] = useState([null]); const [index, setIndex] = useState(0);
-  const [result, setResult] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+function usePage(client, path, revision, report, params = {}) {
+  const scope = JSON.stringify([path, params]);
+  const [pagination, setPagination] = useState({ scope, cursors: [null], index: 0 });
+  if (pagination.scope !== scope) setPagination({ scope, cursors: [null], index: 0 });
+  const { cursors, index } = pagination.scope === scope ? pagination : { cursors: [null], index: 0 };
+  const requestKey = JSON.stringify([scope, revision, index, cursors[index]]);
+  const [state, setState] = useState(null);
   useEffect(() => {
-    let alive = true; setLoading(true); setError(''); setResult(null);
-    client.get(path, { limit: 25, cursor: cursors[index] }).then(value => { if (alive) setResult(value); }).catch(problem => { if (alive) { setError(problem.message); report(problem); } }).finally(() => { if (alive) setLoading(false); });
+    let alive = true;
+    setState({ key: requestKey, loading: true });
+    const [route, filters] = JSON.parse(scope);
+    client.get(route, { ...filters, limit: 25, cursor: cursors[index] }).then(result => { if (alive) setState({ key: requestKey, result }); }).catch(problem => { if (alive) { setState({ key: requestKey, error: problem.message }); report(problem); } });
     return () => { alive = false; };
-  }, [client, path, revision, index, cursors]);
-  const next = () => { if (result?.nextCursor && !loading) { setCursors(old => [...old.slice(0, index + 1), result.nextCursor]); setIndex(index + 1); } };
-  return { result, loading, error, index, next, previous: () => setIndex(Math.max(0, index - 1)) };
+  }, [client, requestKey]);
+  const current = state?.key === requestKey ? state : null;
+  const loading = !current || !!current.loading;
+  const next = () => { if (current?.result?.nextCursor && !loading) setPagination({ scope, cursors: [...cursors.slice(0, index + 1), current.result.nextCursor], index: index + 1 }); };
+  return { result: current?.result, loading, error: current?.error, index, next,
+    previous: () => setPagination({ scope, cursors, index: Math.max(0, index - 1) }) };
 }
 function Pagination({ data }) { return <div className="pagination"><span>Page {data.index + 1} · {data.result?.items?.length || 0} records on this page</span><div><button className="secondary" disabled={data.loading || !data.index} onClick={data.previous}>Previous</button><button className="secondary" disabled={data.loading || !data.result?.nextCursor} onClick={data.next}>Next</button></div></div>; }
 function useDetail(client, path, id, revision, report) {
@@ -112,16 +121,38 @@ export function CloudWorkspace({ config, client, actor, onExpired, onSignOut }) 
     </main></div></div>;
 }
 
+function InvestigationFilters({ apply }) {
+  const [search, setSearch] = useState(''); const [category, setCategory] = useState('');
+  const [schema, setSchema] = useState(''); const [hours, setHours] = useState('');
+  return <form className="filter-bar cloud-investigation-filters" onSubmit={event => {
+    event.preventDefault(); apply({ q: search, category, schema,
+      ...(hours ? { observedFrom: String(Math.floor(Date.now() / 1000) - Number(hours) * 3600) } : {}) });
+  }}><label className="search-field"><Search size={17} /><input aria-label="Search indexed evidence" placeholder="Search indexed IDs, operations, or categories…" maxLength={128} value={search} onChange={event => setSearch(event.target.value)} /></label>
+    <select aria-label="Failure category" value={category} onChange={event => setCategory(event.target.value)}><option value="">All failure categories</option><option value="UNCLASSIFIED">Unclassified failure</option><option value="INVALID_SCHEMA">Invalid shipment schema</option></select>
+    <select aria-label="Shipment schema" value={schema} onChange={event => setSchema(event.target.value)}><option value="">All schemas</option><option value="valid">Valid schema</option><option value="invalid">Invalid schema</option></select>
+    <select aria-label="Collection time" value={hours} onChange={event => setHours(event.target.value)}><option value="">All collection times</option><option value="24">Last 24 hours</option><option value="2">Last 2 hours</option></select>
+    <button className="secondary" type="submit">Apply filters</button></form>;
+}
+
 function CloudInbox({ client, revision, report, mutate, busy, canOperate }) {
-  const data = usePage(client, '/messages', revision, report);
-  const [selected, setSelected] = useState([]); const [search, setSearch] = useState(''); const [dialog, setDialog] = useState(null);
+  const [filters, setFilters] = useState({}); const [view, setView] = useState('messages'); const [incident, setIncident] = useState(null);
+  const data = usePage(client, incident ? endpoint('/incidents', incident.id) + '/messages' : '/' + view, revision, report, filters);
+  const [selected, setSelected] = useState([]); const [dialog, setDialog] = useState(null);
   const [ack, setAck] = useState(false); const [rate, setRate] = useState(5); const [message, setMessage] = useState(null);
   const toggle = id => setSelected(old => old.includes(id) ? old.filter(value => value !== id) : old.length < 25 ? [...old, id] : old);
   const inspect = async id => { try { setMessage(await client.get(endpoint('/messages', id))); } catch (problem) { report(problem); } };
-  const visible = (data.result?.items || []).filter(item => [item.id, item.operationId, item.error].join(' ').toLowerCase().includes(search.toLowerCase()));
+  const visible = data.result?.items || [];
+  const groups = view === 'incidents' && !incident;
+  const changeView = next => { if (next === view && !incident) return; setView(next); setIncident(null); setFilters({}); };
   return <><Title title="Failure inbox" text="Indexed evidence from the configured dead-letter queue; this is a sample, not a complete queue inventory."><button className="secondary" disabled={!canOperate || busy} onClick={() => { setAck(false); setDialog('collect'); }}>Collect snapshots</button><button className="primary" disabled={!canOperate || busy || !selected.length} onClick={() => setDialog('plan')}><FileCheck2 size={16} />Plan {selected.length} selected</button></Title>
-    <div className="filter-bar"><label className="search-field"><Search size={17} /><input aria-label="Search this page" placeholder="Search this page by operation, ID, or error…" value={search} onChange={event => setSearch(event.target.value)} /></label><span>{selected.length} / 25 selected</span><button className="text-button" onClick={() => setSelected([])}>Clear selection</button></div>
+    <div className="cloud-investigation-toolbar"><button className="secondary" aria-pressed={view === 'messages'} onClick={() => changeView('messages')}>Snapshots</button><button className="secondary" aria-pressed={view === 'incidents'} onClick={() => changeView('incidents')}>Incident groups</button><span>{selected.length} / 25 selected across pages and filters</span><button className="text-button" onClick={() => setSelected([])}>Clear selection</button></div>
+    {incident && <div className="inline-note"><span>{incident.label} · collected during {stamp(incident.windowStart)} – {stamp(incident.windowEnd)}</span><button className="text-button" onClick={() => changeView('incidents')}>All incident groups</button></div>}
+    <InvestigationFilters key={view + (incident?.id || '')} apply={setFilters} />
+    <p className="cloud-investigation-help">Filters search indexed metadata on the server. Groups use queue, schema category, consumer version and UTC collection hour; they do not establish a root cause. Counts reflect snapshots collected into each group, including members whose retention has since expired.</p>
+    {data.result?.readBudgetReached && <div role="status" className="inline-note amber-note">The bounded search reached its read budget. Use Next to continue, even if this page has no matches.</div>}
+    {groups ? <section className="panel"><div className="panel-heading"><h2>Incident groups</h2><span className="subtle-label">{data.loading ? 'Loading…' : 'Collected snapshots only'}</span></div><div className="table-scroll"><table><thead><tr><th>Failure category</th><th>Collected</th><th>Consumer version</th><th>Collection window</th></tr></thead><tbody>{visible.map(item => <tr key={item.id}><td><button className="row-link" onClick={() => { setIncident(item); setFilters({}); }}><strong>{item.label}</strong><small className="mono">{item.id}</small></button></td><td>{item.collectedCount}</td><td className="mono">{item.consumerVersion}</td><td>{stamp(item.windowStart)} – {stamp(item.windowEnd)}</td></tr>)}</tbody></table></div>{!data.loading && !visible.length && <Empty>{data.error ? 'Incident groups could not be loaded. Refresh to try again.' : 'No groups on this page. Continue with Next when available, or adjust filters.'}</Empty>}<Pagination data={data} /></section> : <>
     <section className="panel"><div className="panel-heading"><h2>Indexed snapshots</h2><span className="subtle-label">{data.loading ? 'Loading…' : 'Outcomes checked during planning'}</span></div><div className="table-scroll"><table><thead><tr><th>Select</th><th>Message / operation</th><th>Error</th><th>Schema</th><th>Observed</th><th /></tr></thead><tbody>{visible.map(item => <tr key={item.id}><td><input type="checkbox" aria-label={'Select ' + item.id} checked={selected.includes(item.id)} disabled={!canOperate || busy || data.loading || item.expires_at <= Date.now() / 1000 || (!selected.includes(item.id) && selected.length >= 25)} onChange={() => toggle(item.id)} /></td><td><button className="row-link" onClick={() => inspect(item.id)}><strong className="mono">{item.operationId || 'No valid operation ID'}</strong><small className="mono">{item.id}</small></button></td><td>{item.error}</td><td><Badge>{item.valid ? 'VALID' : 'INVALID'}</Badge></td><td>{stamp(item.observedAt)}</td><td><button className="icon-button" aria-label={'Inspect ' + item.id} onClick={() => inspect(item.id)}><Search size={17} /></button></td></tr>)}</tbody></table></div>{!data.loading && !visible.length && <Empty>{data.error ? 'Snapshots could not be loaded. Refresh to try again.' : 'No matching snapshots on this page. Collect evidence or browse another page.'}</Empty>}<Pagination data={data} /></section>
+    </>}
     <div className="inline-note"><ShieldCheck size={17} />Valid schema does not mean eligible for replay. The business verifier decides during planning and checks again before sending.</div>
     {dialog === 'collect' && <Dialog title="Collect DLQ snapshots" close={() => setDialog(null)}><p>Sample up to ten messages from the configured DLQ and save encrypted evidence. Sampling can return messages that are already indexed.</p><label className="checkbox-label"><input type="checkbox" checked={ack} onChange={event => setAck(event.target.checked)} />I understand that receiving temporarily changes message visibility. Original messages will not be deleted.</label><div className="modal-actions"><button className="secondary" onClick={() => setDialog(null)}>Cancel</button><button className="primary" disabled={!ack || busy} onClick={async () => { if (await mutate('/collections', { acknowledgeVisibilityChange: true })) setDialog(null); }}>Collect up to 10 snapshots</button></div></Dialog>}
     {dialog === 'plan' && <Dialog title="Create an AWS replay plan" close={() => setDialog(null)}><form onSubmit={async event => { event.preventDefault(); await mutate('/replay-plans', { messageIds: selected, rate: Number(rate) }); }}><p>Check exactly {selected.length} selected snapshot IDs. Planning sends no replay messages.</p><label>Maximum messages per second<input type="number" min="1" max="25" required value={rate} onChange={event => setRate(event.target.value)} /></label><p>The destination is fixed by the server. Approval expires after one hour.</p><details><summary>Selected snapshot IDs</summary><pre>{selected.join('\n')}</pre></details><div className="modal-actions"><button type="button" className="secondary" onClick={() => setDialog(null)}>Cancel</button><button className="primary" disabled={busy}>Generate dry run</button></div></form></Dialog>}

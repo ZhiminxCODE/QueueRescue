@@ -15,7 +15,7 @@ Status reviewed November 15, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest relevant checks passed: 107 Python tests, 13 frontend tests, six mocked Terraform plans, and frontend build. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 124 Python tests, 14 frontend tests, and frontend build. Six mocked Terraform plans passed at the previous infrastructure milestone. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## 1. Resolve deployment costs — first blocker
 
@@ -53,7 +53,7 @@ Exit: a recorded real-account demonstration with confirmed safeguards and observ
 
 ## 4. Finish the investigation/reporting features from the brief
 
-- [ ] **Me:** Add cloud incident records and normalized error grouping, with server-side filtering and pagination. Current AWS inbox search is page-local and collection is a bounded sample.
+- [x] **Me:** Add cloud incident records and normalized schema-category grouping, with server-side filtering, bounded pagination and dashboard group drill-down. [Contract and offline verification](cloud-investigation.md). Groups are indexed samples, not confirmed root causes or a complete queue inventory; no automatic legacy backfill.
 - [ ] **Me:** Add structured correlation IDs/instrumentation and scoped CloudWatch evidence lookup; show actual log/trace links and mark missing/inconclusive evidence honestly.
 - [ ] **Me:** Show DLQ age/retention warnings before source evidence expires, with snapshot permissions and retention behavior tested.
 - [ ] **Me:** Implement a complete cloud post-incident report: evidence-backed hypotheses, recovered/skipped/blocked/unresolved counts, duration, verification coverage, and measured cost. Current cloud exports are plan/job snapshots and audit pages.

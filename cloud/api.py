@@ -7,6 +7,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from backend.service import mask
 from cloud.aws import runtime
 from cloud.contracts import CloudProblem, actor_from_gateway, cursor_decode, cursor_encode, encode, request_identity
+from cloud.investigation import browse, incident_detail
 from cloud.recovery import approve_plan, control_job, create_plan, ensure_execution, job_detail, required, start_job, verify_job
 
 
@@ -22,7 +23,16 @@ def route(repo, event):
         if path == "/connections":
             return {"items":[{"id":repo.queue_pk,"dlqUrl":repo.settings.dlq_url,"destination":repo.settings.replay_queue_url,
                               "region":repo.settings.region,"mode":"AWS_SANDBOX","consumerVersion":repo.settings.consumer_version}]}
-        if path in {"/messages","/replay-plans","/replay-jobs","/audit"}:
+        if path in {"/messages", "/incidents"}:
+            return browse(repo, q, incidents=path == "/incidents")
+        if path.startswith("/incidents/"):
+            parts = path.strip("/").split("/")
+            if len(parts) == 3 and parts[2] == "messages":
+                return browse(repo, q, incident_id=parts[1])
+            if len(parts) == 2:
+                return incident_detail(repo, parts[1])
+            raise CloudProblem(404, "Route not found")
+        if path in {"/replay-plans","/replay-jobs","/audit"}:
             try:
                 limit = int(q.get("limit", 25))
             except (ValueError, TypeError):

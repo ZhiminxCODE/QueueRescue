@@ -135,6 +135,8 @@ Then run:
 
 Collection invokes a separately scoped Lambda. It samples at most ten DLQ messages, snapshots their bodies and attributes, and releases their visibility lease. It does not delete originals. Repeated sampling may return already indexed messages; it is not a guarantee of a complete queue inventory. Pagination uses opaque `nextCursor` values, e.g. `--query '{"limit":10,"cursor":"RETURNED_CURSOR"}'`. Message details are available at `/messages/MESSAGE_ID` and return a masked payload.
 
+The inbox supports server-side metadata filters and incident groups at `/incidents` and `/incidents/INCIDENT_ID/messages`. Empty bounded-search pages can have a continuation; preserve filters when following it. Groups describe indexed schema categories and collection windows, not confirmed consumer exceptions. See the [investigation contract](cloud-investigation.md) for bounds, retention and legacy-snapshot behavior.
+
 ## Plan, approve, execute, and verify
 
 Create `.data/plan.json` with explicit indexed snapshot IDs, a controlled rate, and no arbitrary destination:

@@ -60,6 +60,8 @@ These are planning budgets, not enforced aggregate limits. A failed demo, servic
 
 DynamoDB transactions consume provisioned capacity rather than adding on-demand request charges; throttling can extend work. Slow-runtime sensitivity changes only Lambda compute to **$0.13800069** (10,350 GB-seconds), giving **$0.19955518** overall under the other assumptions.
 
+Incident investigation adds a metadata membership copy and incident-summary update to each new snapshot transaction. These share the existing provisioned ledger capacity and 10 MiB total storage assumption for the 25-message demo; no additional table or index is created. Metadata searches make at most four queries of up to 100 rows per API request. Filter submissions, incident drill-downs and continuation pages must fit within the existing 200 API-Lambda invocation budget. Additional browsing, collection or retries require reassessment; increased capacity pressure can extend runtimes beyond the illustrative average.
+
 The configured event mappings, Cognito public client/domain, HTTP JWT authorizer and state machine add no fixed resource fee. Lambda ZIP artifacts, Terraform state and the frontend are local. No provisioned concurrency/pollers, extra ephemeral storage, custom metrics, alarms, dashboards, log queries/Live Tail, tracing, backups/PITR, customer KMS keys, separate CloudTrail trail/data events, SES dedicated IPs, frontend hosting, custom DNS, VPC/NAT, EC2 or RDS are configured. Their usage is zero here; enabling them changes the estimate. Unrelated account charges, paid support, tax, currency conversion and invoice rounding are outside this project estimate.
 
 ### Reproduce without accessing AWS

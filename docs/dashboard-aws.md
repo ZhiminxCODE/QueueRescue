@@ -40,7 +40,7 @@ After creating a plan, sign out/change application account, then sign in as the 
 ## Read and mutation behavior
 
 - Reads happen on opening a view, explicit pagination, successful actions, and manual refresh. There is no background polling or automatic collection/replay. Job progress requires **Refresh view**.
-- Messages use opaque server pagination. Search filters only the current page and says so. The UI never infers a total queue size or a business outcome from indexed metadata.
+- Messages and incident groups use server-side metadata search, schema/category/time filters, and opaque pagination. Apply filters explicitly; changing filters resets the page. An empty bounded search page can still have a Next page. Group drill-down lists indexed members and preserves explicit snapshot selection. The UI never infers a total queue size, confirmed root cause or business outcome from indexed metadata. See the [investigation contract](cloud-investigation.md).
 - Collection requires explicit acknowledgment that receive operations change visibility. At most ten sampled IDs are returned; duplicates and incomplete queue inventory are possible. Originals remain retained.
 - Plans submit 1–25 explicit snapshot IDs with an integer rate of 1–25. Decision reasons and the complete immutable document/hash are available for review/export.
 - Catalog endpoints return IDs, not complete plan/job objects. The dashboard fetches selected details separately and uses the backend's field names and state transitions.

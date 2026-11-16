@@ -28,4 +28,8 @@
 .cloud-workspace pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .cloud-connection-content { padding: 24px; }
 .cloud-workspace table small { display: block; margin-top: 6px; }
+.cloud-investigation-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.cloud-investigation-toolbar [aria-pressed="true"] { border-color: #166b5c; color: #145e54; background: #e1f3ee; }
+.cloud-investigation-filters { flex-wrap: wrap; }
+.cloud-investigation-help { color: #64748b; font-size: 13px; line-height: 1.7; margin: 16px 0; }
 @media (max-width: 800px) { .cloud-steps { grid-template-columns: 1fr; } .cloud-steps > button { border-right: 0; border-bottom: 1px solid #e5e7eb; } .cloud-identity { max-width: 100px; } .cloud-refresh-bar { align-items: flex-start; } .cloud-login-card { padding: 25px; } }

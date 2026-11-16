@@ -91,8 +91,28 @@ test('ambiguous mutation persists exact key/body across a reload and blocks new 
 test('AWS client rejects demo/arbitrary routes before transmitting authorization', async () => {
   let calls = 0;
   const client = createClient(config, { session: () => ({ accessToken: 'secret' }) }, { storage: storage(), fetcher: async () => { calls++; } });
-  for (const path of ['/demo/session', '//evil.example', '/messages/../session', '/session?token=leak']) await assert.rejects(client.get(path));
+  for (const path of ['/demo/session', '//evil.example', '/messages/../session', '/session?token=leak',
+    '/incidents/../session', '/incidents/invalid/messages', '/incidents/' + 'a'.repeat(64) + '/messages/extra']) await assert.rejects(client.get(path));
   assert.equal(calls, 0);
+});
+
+test('investigation reads preserve server filters and opaque continuation without mutations', async () => {
+  const sent = []; const id = 'a'.repeat(64);
+  const client = createClient(config, { session: () => ({ accessToken: 'token' }) }, {
+    storage: storage(), fetcher: async (url, options) => { sent.push([new URL(url), options]); return json({ items: [], nextCursor: 'opaque+/=' }); },
+  });
+  const filters = { q: 'shipment:Case & needle', schema: 'valid', category: 'UNCLASSIFIED', observedFrom: '1800000000', limit: 25 };
+  const first = await client.get('/messages', filters);
+  await client.get('/messages', { ...filters, cursor: first.nextCursor });
+  await client.get('/incidents', { category: 'UNCLASSIFIED' });
+  await client.get('/incidents/' + id);
+  await client.get('/incidents/' + id + '/messages', filters);
+  assert.equal(sent[1][0].searchParams.get('cursor'), 'opaque+/=');
+  assert.equal(sent[1][0].searchParams.get('q'), filters.q);
+  assert.equal(sent[4][0].pathname, '/api/incidents/' + id + '/messages');
+  assert.equal(sent[4][0].searchParams.get('schema'), 'valid');
+  assert.ok(sent.every(([, options]) => options.method === 'GET' && !options.body));
+  assert.equal(client.pending(), null);
 });
 
 test('expired sessions send no request and definitive rejections permit a corrected action', async () => {
