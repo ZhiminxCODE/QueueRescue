@@ -58,6 +58,13 @@ def mask(value):
     return value
 
 
+def plan_list_metadata(document):
+    decisions = document["decisions"]
+    return {"filters": document["filters"], "rate": document["rate"], "selectedCount": len(decisions),
+            "counts": {key: sum(d["decision"] == key for d in decisions)
+                       for key in ("ELIGIBLE", "SKIP", "REVIEW", "BLOCKED")}}
+
+
 class Store:
     def __init__(self, path=":memory:", seed_count=1000, consumer_delay=.25, status_adapter=None):
         if not math.isfinite(consumer_delay) or consumer_delay < 0:
@@ -81,6 +88,9 @@ class Store:
           id TEXT PRIMARY KEY, document TEXT NOT NULL, hash TEXT NOT NULL,
           state TEXT NOT NULL, created_by TEXT NOT NULL, created_at REAL NOT NULL,
           expires_at REAL NOT NULL, approved_by TEXT, approval_note TEXT);
+        CREATE INDEX IF NOT EXISTS plans_created ON plans(created_at DESC, id DESC);
+        CREATE TABLE IF NOT EXISTS plan_summaries (
+          plan_id TEXT PRIMARY KEY REFERENCES plans(id), metadata TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS jobs (
           id TEXT PRIMARY KEY, plan_id TEXT UNIQUE NOT NULL REFERENCES plans(id),
           state TEXT NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL,
@@ -122,6 +132,12 @@ class Store:
         # Additive migration: existing delivered messages with business proof
         # are already consumed; only unprocessed historical deliveries are queued.
         with self.transaction():
+            # Backfill old databases once, without changing immutable documents,
+            # hashes, approvals or audit history. Read one full document at a time.
+            for row in self.db.execute("""SELECT id, document FROM plans WHERE NOT EXISTS
+                    (SELECT 1 FROM plan_summaries WHERE plan_id=plans.id)"""):
+                self.db.execute("INSERT INTO plan_summaries VALUES (?,?)",
+                                (row["id"], canonical(plan_list_metadata(json.loads(row["document"])))))
             self.db.execute("""INSERT OR IGNORE INTO consumer_work(delivery_id,state,available_at)
                 SELECT id, CASE WHEN EXISTS(SELECT 1 FROM shipments WHERE shipments.operation_id=deliveries.operation_id)
                 THEN 'COMPLETE' ELSE 'PENDING' END, created_at FROM deliveries""")
@@ -299,8 +315,20 @@ class Store:
         plan_hash = digest(canonical(document))
         self.db.execute("INSERT INTO plans VALUES (?,?,?,?,?,?,?,?,?)",
                         (identifier, canonical(document), plan_hash, "READY", actor["name"], now, now + 3600, None, None))
+        self.db.execute("INSERT INTO plan_summaries VALUES (?,?)",
+                        (identifier, canonical(plan_list_metadata(document))))
         self.audit(actor, "PLAN_CREATED", identifier, {"hash": plan_hash, "selected": len(rows), "rate": rate})
         return self.plan(identifier)
+
+    def list_plans(self):
+        # Never read full decision documents for the list. Mutable state and
+        # expiry come from the authoritative row, not the presentation cache.
+        rows = self.read("""SELECT p.id,p.state,p.expires_at,s.metadata FROM plans p
+            JOIN plan_summaries s ON s.plan_id=p.id
+            ORDER BY p.created_at DESC,p.id DESC LIMIT 100""")
+        now = time.time()
+        return [{**json.loads(row["metadata"]), "id": row["id"], "state": row["state"],
+                 "expired": now >= row["expires_at"]} for row in rows]
 
     def plan(self, identifier):
         row = self.one("plans", identifier)

@@ -81,6 +81,27 @@ class ApiTests(unittest.TestCase):
         token = self.login("Operator")
         self.assertEqual(self.request("POST", "/replay-plans", {}, token)[0], 400)
 
+    def test_plan_list_is_compact_and_detail_remains_complete(self):
+        operator, approver, viewer = self.login('Operator'), self.login('Approver'), self.login('Viewer')
+        _, plan = self.post('/replay-plans', {}, operator)
+        self.assertEqual(self.request('GET', '/replay-plans')[0], 401)
+        status, listing = self.request('GET', '/replay-plans', token=viewer)
+        self.assertEqual(status, 200)
+        summary = next(row for row in listing['items'] if row['id'] == plan['id'])
+        self.assertEqual(set(summary), {'id', 'state', 'expired', 'counts', 'selectedCount', 'filters', 'rate'})
+        self.assertEqual(summary['selectedCount'], len(plan['decisions']))
+        self.assertEqual(summary['counts'], plan['counts'])
+        status, detail = self.request('GET', '/replay-plans/' + plan['id'], token=viewer)
+        self.assertEqual(status, 200)
+        self.assertEqual(detail, plan)
+        self.post('/replay-plans/' + plan['id'] + '/approve', {'planHash': plan['hash'], 'note': 'Reviewed exact full plan.'}, approver)
+        with self.store.transaction():
+            self.store.db.execute('UPDATE plans SET expires_at=0 WHERE id=?', (plan['id'],))
+        listing = self.request('GET', '/replay-plans', token=viewer)[1]['items']
+        summary = next(row for row in listing if row['id'] == plan['id'])
+        self.assertEqual(summary['state'], 'APPROVED')
+        self.assertTrue(summary['expired'])
+
     def test_http_idempotency_and_hash_approval(self):
         operator, approver = self.login("Operator"), self.login("Approver")
         key = str(uuid.uuid4())

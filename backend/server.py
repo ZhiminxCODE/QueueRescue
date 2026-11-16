@@ -106,7 +106,7 @@ def make_handler(store, port):
                 elif path.startswith("/messages/"):
                     result = store.message(path.split("/")[2])
                 elif path == "/replay-plans":
-                    result = {"items": [store.plan(r["id"]) for r in store.read("SELECT id FROM plans ORDER BY created_at DESC LIMIT 100")]}
+                    result = {"items": store.list_plans()}
                 elif path.startswith("/replay-plans/"):
                     result = store.plan(path.split("/")[2])
                 elif path == "/replay-jobs":
