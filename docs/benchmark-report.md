@@ -42,9 +42,36 @@ An independent database check confirmed 10,000 original messages retained, exact
 ## Findings and limits
 
 - Inbox actions include the existing 180 ms debounce. Pagination also uses this delay; separating immediate page navigation from debounced search is a possible local UX improvement.
-- Saved-plan latency increased from 50.1 ms to 182.5 ms as the list grew from zero to four existing full plans. The local list endpoint returns complete decision documents; roughly 2.40 MB per plan makes response size grow with plan history. Returning summaries with a separate selected-plan fetch is the next performance improvement. This observation does not establish the sole cause of the timing change.
+- In the original run, saved-plan latency increased from 50.1 ms to 182.5 ms as the list grew from zero to four existing full plans. Its list endpoint returned complete decision documents; roughly 2.40 MB per plan made response size grow with history. The follow-up below replaces that behavior. This observation does not establish the sole cause of the timing change.
 - The UI renders 25 message rows and an eight-decision plan sample. Bounded DOM size does not make backend grouping or list serialization constant-time. This test did not cover 100 saved plans, concurrent users, replay execution, a slow device or remote network.
 - AWS plans remain limited to 25 snapshots. A cloud load test needs a separate cost-reviewed workload; local SQLite timings cannot be converted into AWS service throughput or charges.
+
+## Saved-plan loading follow-up
+
+The local simulator now returns compact list summaries and fetches one full plan when selected. A separate SQLite table stores only counts, selection size, filters and rate. List state/expiry come from the authoritative plan row. Startup backfills missing summaries for legacy databases once, without changing immutable documents, hashes, approvals or audit records. The first startup of a large legacy database can take longer. Lists remain capped at the newest 100 plans, ordered by creation time and ID. This change does not modify the AWS catalog/API.
+
+On 2026-11-16, `python -m backend.benchmark_plans --plans 5 --messages 10000 --runs 5` measured the equivalent legacy list and new summary list on the same five-plan fixture. It includes loading and JSON serialization, with warm caches allowed and phases run in a fixed order. Legacy IDs are prepared before timing. This is local store work, not HTTP or browser latency.
+
+| Operation | Uncompressed JSON bytes | Median ms | p95 / maximum ms |
+| --- | ---: | ---: | ---: |
+| Equivalent legacy list, all five full plans | 11,992,525 | 79.12 | 83.03 |
+| New list, five summaries | 861 | 2.05 | 2.76 |
+| One selected full plan | 2,398,497 | 14.84 | 15.43 |
+
+An actual authenticated HTTP check independently returned an 861-byte five-plan list with no decisions and a 2,398,496-byte selected detail containing all 10,000 decisions. The fixtures have different plan IDs/timestamps, so full-document sizes differ slightly. Full documents remain available for review and export; summaries are never used as approval or execution authority.
+
+Five production-browser cycles were repeated on a fresh 10,000-event database, on the same machine/browser at 1512 × 827. The original viewport was 1512 × 771, so these small samples are indicative observations rather than a controlled speedup estimate. Both runs include an empty first list and four growing nonempty histories.
+
+| Action | Original median ms | Follow-up median ms | Original max ms | Follow-up max ms |
+| --- | ---: | ---: | ---: | ---: |
+| Open saved plans, including selected detail | 105.5 | 99.8 | 182.5 | 106.1 |
+| Generate dry run and display full detail | 325.0 | 258.3 | 365.8 | 283.1 |
+
+The nonempty list now requires a summary request followed by a selected-detail request. Creating a plan still returns its full POST response and then refreshes the selected detail; this keeps existing mutation responses intact but adds a read. Single-plan transfer size remains about 2.40 MB. Further optimization could reuse the create response or page decision details; the list no longer transfers every saved decision document.
+
+The follow-up recorded 56 API resource entries (maximum duration 177.8 ms), an 817 ms initial application-ready observation and one 50 ms Long Task. Independent database inspection again found 10,000 retained originals, five unapproved READY plans, zero jobs and zero deliveries. No approvals or replay were performed by the benchmark.
+
+Verification passed 175 backend tests, 29 frontend tests and the production build. Tests cover compact authenticated lists, complete detail, live expiry/state, deterministic bounds, legacy backfill and repeat startup, and rejection of approval based on altered presentation metadata. Browser checks with a disposable local fixture verified a one-time detail failure, retry, hidden actions while loading, and a delayed old response failing to replace the current selection. Raw results, screenshots and fixture data remain ignored.
 
 ## Reproduce
 
@@ -53,6 +80,7 @@ Install the pinned project dependencies using the README setup, then run the bac
 ```sh
 mkdir -p .data
 .venv/bin/python -m backend.benchmark --runs 5 --messages 10000 > .data/benchmark-backend.json
+.venv/bin/python -m backend.benchmark_plans --plans 5 --runs 5 --messages 10000 > .data/benchmark-plans.json
 ```
 
 For the browser fixture, explicitly select a local build even if an ignored AWS environment file exists. Use a **new database filename** for every measured run; the fixture expects no saved plans. Choose an available loopback port.
