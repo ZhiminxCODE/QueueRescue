@@ -59,6 +59,8 @@ The account must permit creating scoped IAM roles, queues, tables, S3 storage, L
 
 Offline tests exercise real AWS SDK request shapes, conditional conflicts, absent verifier proof, duplicate consumer delivery, approval and idempotency decisions, uncertain-send behavior, and non-destructive collection. Terraform formatting, validation, and mocked-provider plan assertions run without customer credentials. A deterministic Lambda package is generated locally.
 
+Cloud handlers emit versioned, allowlisted diagnostic telemetry with hashed message/operation/correlation/attempt references. The API can explicitly look up exact-message or exact-attempt evidence in this stack's consumer/replay log groups using bounded windows and page limits. The [log-evidence contract](cloud-log-evidence.md) covers authorization, incomplete evidence, retention and cost bounds. Logs never replace business verification; distributed traces remain uninstrumented. All verification to date is offline.
+
 After account access is available, run a reviewed Terraform plan, deploy the sandbox, seed synthetic operations, observe source failures reaching the DLQ, opt into collection, approve and execute a filtered plan, verify business outcomes, and measure actual usage. Retain the execution and verification results as evidence. Teardown is documented separately from protected evidence retention.
 
 ## Primary implementation references

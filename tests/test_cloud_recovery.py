@@ -1,6 +1,7 @@
 import io
 import json
 import unittest
+from contextlib import redirect_stdout
 
 from cloud_support import AWS_TESTS_AVAILABLE, CloudFixture
 
@@ -11,6 +12,7 @@ if AWS_TESTS_AVAILABLE:
     from cloud.contracts import CloudProblem, encode, request_identity
     from cloud.recovery import approve_plan, control_job, create_plan, job_detail, start_job, verify_job
     from cloud.replay import step, worker_recovery
+    from cloud.telemetry import reference
 
 
 class FakeStates:
@@ -64,13 +66,21 @@ class AwsRecoveryTests(CloudFixture):
 
     def test_full_aws_plan_approval_send_and_business_verification(self):
         job = self.job()
-        self.assertFalse(self.run_step(job)['continue'])
+        telemetry = io.StringIO()
+        with redirect_stdout(telemetry):
+            self.assertFalse(self.run_step(job)['continue'])
         current = job_detail(self.repo, job['id'])
         self.assertEqual(current['state'], 'VERIFYING')
         self.assertEqual(current['counts']['SENT'], 1)
         messages = self.clients.sqs.receive_message(QueueUrl=self.settings.replay_queue_url, MessageAttributeNames=['All'])['Messages']
         self.assertEqual(messages[0]['Body'].encode(), self.body.encode())
         self.assertEqual(messages[0]['MessageAttributes']['replayJobId']['StringValue'], job['id'])
+        events = [json.loads(line) for line in telemetry.getvalue().splitlines()]
+        self.assertEqual([event['event'] for event in events], ['REPLAY_SEND_INTENT', 'REPLAY_SEND_ACCEPTED'])
+        self.assertEqual(events[1]['messageRef'], reference('message', messages[0]['MessageId']))
+        self.assertEqual(events[1]['attemptRef'], reference('attempt', current['attempts'][0]['id']))
+        self.assertEqual(events[1]['correlationRef'], reference('correlation', 'correlation-1'))
+        self.assertEqual(events[0]['correlationRef'], events[1]['correlationRef'])
         self.assertEqual(verify_job(self.repo, self.operator, job['id'])['state'], 'PARTIAL')
         self.verifier.statuses['shipment:o1'] = 'COMPLETE'
         verified = verify_job(self.repo, self.operator, job['id'])

@@ -95,6 +95,20 @@ run "safe_sandbox_plan" {
     condition     = aws_lambda_function.function["consumer"].reserved_concurrent_executions == 4 && aws_lambda_function.function["replay"].reserved_concurrent_executions == 1
     error_message = "Active consumers and replay must retain their bounded reserved concurrency."
   }
+  assert {
+    condition = alltrue([for key, policy in aws_iam_role_policy.function : alltrue([
+      for statement in jsondecode(policy.policy).Statement :
+      !contains(statement.Action, "logs:FilterLogEvents") || (key == "api" && toset(statement.Resource) == toset([
+        "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/queuerescue-dev-consumer:*",
+        "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/queuerescue-dev-replay:*"
+      ]))
+    ])])
+    error_message = "Only the API may look up logs, and only in this stack's exact consumer and replay groups."
+  }
+  assert {
+    condition     = contains(flatten([for statement in jsondecode(aws_iam_role_policy.function["api"].policy).Statement : statement.Action]), "logs:FilterLogEvents") && alltrue([for policy in aws_iam_role_policy.function : !contains(flatten([for statement in jsondecode(policy.policy).Statement : statement.Action]), "logs:Unmask") && !contains(flatten([for statement in jsondecode(policy.policy).Statement : statement.Action]), "logs:StartQuery")])
+    error_message = "Scoped filtering must be present without unmasking or Logs Insights permissions."
+  }
 }
 
 run "fresh_stack_defaults_are_minimal_and_idle" {

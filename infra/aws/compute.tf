@@ -1,21 +1,23 @@
 locals {
   handlers = { api = "cloud.api.handler", collector = "cloud.collector.handler", replay = "cloud.replay.handler", consumer = "cloud.shipment.consumer", verifier = "cloud.shipment.verifier" }
   environment = {
-    QR_REGION            = var.aws_region
-    QR_ACCOUNT_ID        = var.aws_account_id
-    QR_LEDGER_TABLE      = aws_dynamodb_table.data["ledger"].name
-    QR_BUSINESS_TABLE    = aws_dynamodb_table.data["business"].name
-    QR_AUDIT_TABLE       = aws_dynamodb_table.data["audit"].name
-    QR_EVIDENCE_BUCKET   = aws_s3_bucket.evidence.id
-    QR_KMS_KEY_ARN       = local.kms_key_arn
-    QR_SOURCE_QUEUE_URL  = aws_sqs_queue.queue["source"].url
-    QR_DLQ_URL           = aws_sqs_queue.queue["source-dlq"].url
-    QR_REPLAY_QUEUE_URL  = aws_sqs_queue.queue["replay"].url
-    QR_REPLAY_QUEUE_ARN  = aws_sqs_queue.queue["replay"].arn
-    QR_VERIFIER_ARN      = local.function_arn["verifier"]
-    QR_COLLECTOR_ARN     = local.function_arn["collector"]
-    QR_STATE_MACHINE_ARN = local.workflow_arn
-    QR_CONSUMER_VERSION  = "shipment-${substr(filebase64sha256(var.lambda_package), 0, 16)}"
+    QR_REGION             = var.aws_region
+    QR_ACCOUNT_ID         = var.aws_account_id
+    QR_LEDGER_TABLE       = aws_dynamodb_table.data["ledger"].name
+    QR_BUSINESS_TABLE     = aws_dynamodb_table.data["business"].name
+    QR_AUDIT_TABLE        = aws_dynamodb_table.data["audit"].name
+    QR_EVIDENCE_BUCKET    = aws_s3_bucket.evidence.id
+    QR_KMS_KEY_ARN        = local.kms_key_arn
+    QR_SOURCE_QUEUE_URL   = aws_sqs_queue.queue["source"].url
+    QR_DLQ_URL            = aws_sqs_queue.queue["source-dlq"].url
+    QR_REPLAY_QUEUE_URL   = aws_sqs_queue.queue["replay"].url
+    QR_REPLAY_QUEUE_ARN   = aws_sqs_queue.queue["replay"].arn
+    QR_VERIFIER_ARN       = local.function_arn["verifier"]
+    QR_COLLECTOR_ARN      = local.function_arn["collector"]
+    QR_STATE_MACHINE_ARN  = local.workflow_arn
+    QR_CONSUMER_VERSION   = "shipment-${substr(filebase64sha256(var.lambda_package), 0, 16)}"
+    QR_CONSUMER_LOG_GROUP = "/aws/lambda/${local.prefix}-consumer"
+    QR_REPLAY_LOG_GROUP   = "/aws/lambda/${local.prefix}-replay"
   }
   ledger_read   = { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:Query"], Resource = aws_dynamodb_table.data["ledger"].arn }
   ledger_write  = { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:ConditionCheckItem"], Resource = aws_dynamodb_table.data["ledger"].arn }
@@ -23,6 +25,10 @@ locals {
   evidence_read = { Effect = "Allow", Action = ["s3:GetObject"], Resource = "${aws_s3_bucket.evidence.arn}/evidence/*" }
   policies = {
     api = [local.ledger_write, local.audit_append, local.evidence_read,
+      { Effect = "Allow", Action = ["logs:FilterLogEvents"], Resource = [
+        "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.prefix}-consumer:*",
+        "arn:aws:logs:${var.aws_region}:${var.aws_account_id}:log-group:/aws/lambda/${local.prefix}-replay:*"
+      ] },
       { Effect = "Allow", Action = ["dynamodb:GetItem", "dynamodb:Query"], Resource = aws_dynamodb_table.data["audit"].arn },
       { Effect = "Allow", Action = ["lambda:InvokeFunction"], Resource = [local.function_arn["verifier"], local.function_arn["collector"]] },
       { Effect = "Allow", Action = ["states:StartExecution"], Resource = local.workflow_arn }

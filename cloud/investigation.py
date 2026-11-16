@@ -12,7 +12,8 @@ WINDOW_SECONDS = 3600
 QUERY_PAGE_SIZE = 100
 MAX_QUERY_PAGES = 4
 MESSAGE_FIELDS = ("id", "operationId", "valid", "error", "errorCategory", "incidentId", "checksum",
-                  "evidenceChecksum", "originalMessageId", "observedAt", "sourceSentAt", "expires_at")
+                  "evidenceChecksum", "originalMessageId", "observedAt", "sourceSentAt", "expires_at",
+                  "messageRef", "operationRef", "correlationRef")
 INCIDENT_FIELDS = ("id", "signature", "category", "label", "consumerVersion", "windowStart", "windowEnd",
                    "groupingVersion", "expires_at", "collectedCount")
 

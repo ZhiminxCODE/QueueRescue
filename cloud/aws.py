@@ -62,13 +62,14 @@ class Clients:
     sqs: object
     verifier: object
     states: object
+    logs: object = None
 
     @classmethod
     def create(cls, region):
         # Never automatically repeat a possibly accepted SendMessage or Invoke.
         config = Config(region_name=region, connect_timeout=3, read_timeout=8,
                         retries={"mode": "standard", "total_max_attempts": 1})
-        return cls(*(boto3.client(name, config=config) for name in ("dynamodb", "s3", "sqs", "lambda", "stepfunctions")))
+        return cls(*(boto3.client(name, config=config) for name in ("dynamodb", "s3", "sqs", "lambda", "stepfunctions", "logs")))
 
 
 class Repository:

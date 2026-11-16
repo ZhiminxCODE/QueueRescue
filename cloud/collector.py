@@ -2,6 +2,7 @@
 from cloud.aws import runtime
 from cloud.contracts import CloudProblem, sha, validate_event
 from cloud.investigation import incident_writes
+from cloud.telemetry import emit, message_refs, queue_arn, reference
 
 
 def collect(repo):
@@ -31,6 +32,7 @@ def collect(repo):
                     "evidenceKey": key, "evidenceChecksum": evidence_checksum, "originalMessageId": message["MessageId"], "observedAt": observed_at,
                     "sourceSentAt": int(message.get("Attributes", {}).get("SentTimestamp", "0")) // 1000,
                     "expires_at": observed_at + repo.settings.retention_days * 86400}
+            item.update(message_refs(message["MessageId"], operation, snapshot["messageAttributes"]))
             try:
                 repo.commit(incident_writes(repo, item), "collector", "SNAPSHOT_INDEXED", identifier,
                             detail={"incidentId": item["incidentId"]})
@@ -38,6 +40,9 @@ def collect(repo):
                 if not repo.get(repo.queue_pk, item["sk"]):
                     raise
             indexed.append(identifier)
+            emit("collector", "SNAPSHOT_INDEXED", clock=repo.clock,
+                 **message_refs(message["MessageId"], operation, snapshot["messageAttributes"]),
+                 queueRef=reference("queue", queue_arn(repo.settings.source_queue_url)), snapshotRef=reference("snapshot", identifier))
         finally:
             # Release the receive lease; this is a visibility mutation, not deletion.
             repo.clients.sqs.change_message_visibility(QueueUrl=repo.settings.dlq_url,

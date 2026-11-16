@@ -7,6 +7,13 @@ from botocore.exceptions import BotoCoreError, ClientError
 from cloud.aws import condition, runtime, update, wire
 from cloud.contracts import CloudProblem, encode, sha
 from cloud.recovery import classify, job_detail, lock_key, release_lock, required
+from cloud.telemetry import emit, message_refs, reference, queue_arn
+
+
+def attempt_refs(repo, identifier, attempt):
+    return {"queueRef": reference("queue", queue_arn(repo.settings.replay_queue_url)),
+            "operationRef": reference("operation", attempt["operationId"]),
+            "jobRef": reference("job", identifier), "attemptRef": reference("attempt", attempt["id"])}
 
 
 def worker_recovery(repo, identifier, generation):
@@ -16,6 +23,7 @@ def worker_recovery(repo, identifier, generation):
     actions = []
     for attempt in job["attempts"]:
         if attempt["state"] == "LEASED":
+            emit("replay", "REPLAY_WORKER_INTERRUPTED", clock=repo.clock, **attempt_refs(repo, identifier, attempt))
             actions.append(update(repo.table, {"pk":attempt["pk"],"sk":attempt["sk"]},
                 "SET #state=:uncertain,detail=:detail", "#state=:leased",
                 {":uncertain":"UNCERTAIN",":detail":"Worker interrupted before durable send acknowledgment",":leased":"LEASED"}, {"#state":"state"}))
@@ -89,10 +97,16 @@ def step(repo, identifier, generation, max_sends=5, sleep=time.sleep, monotonic=
         attrs = dict(snapshot["messageAttributes"])
         attrs.update({key:{"DataType":"String","StringValue":value} for key,value in
             {"replayJobId":identifier,"replayAttemptId":attempt["id"],"operationId":attempt["operationId"]}.items()})
+        refs = {**message_refs(snapshot["originalMessageId"], attempt["operationId"], snapshot["messageAttributes"]),
+                **attempt_refs(repo, identifier, attempt), "snapshotRef": reference("snapshot", decision["messageId"])}
+        emit("replay", "REPLAY_SEND_INTENT", clock=repo.clock, **refs)
         try:
             result = repo.clients.sqs.send_message(QueueUrl=repo.settings.replay_queue_url, MessageBody=snapshot["body"], MessageAttributes=attrs)
         except (BotoCoreError, ClientError):
+            emit("replay", "REPLAY_SEND_UNCERTAIN", clock=repo.clock, outcome="UNKNOWN", **refs)
             return worker_recovery(repo, identifier, generation)
+        emit("replay", "REPLAY_SEND_ACCEPTED", clock=repo.clock,
+             **{**refs, "messageRef": reference("message", result["MessageId"])})
         if after_send is not None:
             after_send()
         # Cancellation never erases an already-sent event. Advance the cursor

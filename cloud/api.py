@@ -8,7 +8,9 @@ from backend.service import mask
 from cloud.aws import runtime
 from cloud.contracts import CloudProblem, actor_from_gateway, cursor_decode, cursor_encode, encode, request_identity
 from cloud.investigation import browse, incident_detail
+from cloud.log_evidence import lookup
 from cloud.recovery import approve_plan, control_job, create_plan, ensure_execution, job_detail, required, start_job, verify_job
+from cloud.telemetry import emit, reference
 
 
 def route(repo, event):
@@ -47,7 +49,12 @@ def route(repo, event):
             rows, cursor = repo.query(pk, prefix, limit=limit, cursor=cursor_decode(q.get("cursor")), table=table)
             return {"items":rows,"nextCursor":cursor_encode(cursor)}
         if path.startswith("/messages/"):
-            identifier = path.split("/")[2]
+            parts = path.strip("/").split("/")
+            identifier = parts[1]
+            if len(parts) == 3 and parts[2] == "evidence":
+                return lookup(repo, identifier, q)
+            if len(parts) != 2:
+                raise CloudProblem(404, "Route not found")
             message = repo.get(repo.queue_pk, "MSG#" + identifier)
             if not message:
                 raise CloudProblem(404, "Snapshot not found")
@@ -121,4 +128,5 @@ def handler(event, context):
     except (BotoCoreError, ClientError):
         # The request may have committed; clients must retry with the same key.
         result, code = {"error":"AWS request unavailable; retry with the same Idempotency-Key"}, 503
+    emit("api", "API_COMPLETED", statusCode=code, requestRef=reference("request", getattr(context, "aws_request_id", None)))
     return {"statusCode":code,"headers":{"content-type":"application/json","cache-control":"no-store"},"body":encode(result)}
