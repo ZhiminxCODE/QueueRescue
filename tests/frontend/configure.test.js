@@ -5,6 +5,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { dashboardConnectOrigins } from '../../tools/dashboard_csp.mjs';
+
+test('build policy uses validated public origins and keeps local builds same-origin', () => {
+  assert.deepEqual(dashboardConnectOrigins({}), []);
+  const env = { VITE_QR_MODE: 'aws', VITE_QR_REGION: 'us-east-1', VITE_QR_API_URL: 'https://example123.execute-api.us-east-1.amazonaws.com',
+    VITE_QR_COGNITO_URL: 'https://example123.auth.us-east-1.amazoncognito.com', VITE_QR_COGNITO_CLIENT_ID: 'publicclient',
+    VITE_QR_REDIRECT_URI: 'http://localhost:8000/' };
+  assert.deepEqual(dashboardConnectOrigins(env), [env.VITE_QR_API_URL, env.VITE_QR_COGNITO_URL]);
+  assert.throws(() => dashboardConnectOrigins({ ...env, VITE_QR_API_URL: 'https://evil.example' }));
+});
 
 test('configuration CLI writes private public-only settings and refuses to overwrite them', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'qr-dashboard-config-'));

@@ -119,8 +119,11 @@ class Settings:
                        consumer_version=os.environ.get("QR_CONSUMER_VERSION", "shipment-demo-v1"))
         if not re.fullmatch(r"\d{12}", settings.account_id):
             raise ValueError("Invalid target AWS account")
-        for url in [settings.source_queue_url, settings.dlq_url, settings.replay_queue_url]:
+        queues = [settings.source_queue_url, settings.dlq_url, settings.replay_queue_url]
+        if len(set(queues)) != 3:
+            raise ValueError("Source, DLQ and replay queues must be distinct")
+        for url in queues:
             expected = "https://sqs." + settings.region + ".amazonaws.com/" + settings.account_id + "/"
-            if not url.startswith(expected) or url.endswith(".fifo"):
+            if not re.fullmatch(re.escape(expected) + r"[A-Za-z0-9_-]{1,80}", url):
                 raise ValueError("Queue must be an allowlisted standard queue in the target account and region")
         return settings

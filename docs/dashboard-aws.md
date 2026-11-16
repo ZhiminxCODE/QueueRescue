@@ -35,6 +35,8 @@ Create the Operator and separate Approver in the deployed Cognito pool as descri
 
 The app uses authorization code + PKCE (S256), a random single-use state, a ten-minute sign-in window, and an exact configured callback. It removes callback credentials from browser history before exchanging the code. Only the short-lived access token is retained in tab-scoped `sessionStorage`; ID and refresh tokens are discarded. Roles come from authenticated `/session`, not decoded browser claims or a role picker. Logout clears the local access session and visits Cognito logout. The user signs in again on expiry; access tokens can remain valid server-side until they expire. This prototype has no browser refresh-token/BFF session service.
 
+Production builds emit `connect-origins.json` with only the validated public API and Cognito origins. The loopback static server uses that file for its Content Security Policy, allowing API requests and token exchange while keeping other connections blocked. Rebuild after changing dashboard settings; deploy the manifest together with the matching assets. Local-mode builds allow only same-origin connections. Vite development hosting does not use the loopback server's CSP.
+
 After creating a plan, sign out/change application account, then sign in as the separate Approver. The selected plan and page are retained in the same tab/workspace so the approver can review the same hash. Self-approval is disabled in the UI and independently rejected by the backend. Sign back in as Operator to execute. No demo identity selector, injected crash option, arbitrary destination, or root/IAM sign-in appears in AWS workflows.
 
 ## Read and mutation behavior

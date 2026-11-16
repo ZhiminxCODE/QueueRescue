@@ -65,8 +65,12 @@ variable "callback_urls" {
   type    = list(string)
   default = ["http://localhost:5173/", "http://localhost:8000/", "http://localhost:8765/callback"]
   validation {
-    condition     = length(var.callback_urls) > 0 && alltrue([for url in var.callback_urls : startswith(url, "https://") || startswith(url, "http://localhost:")])
-    error_message = "Cognito callbacks must use HTTPS or an explicit localhost development port."
+    condition = length(var.callback_urls) > 0 && alltrue([for url in var.callback_urls :
+      can(regex("^(https://([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(:[0-9]{1,5})?|http://localhost:[0-9]{1,5})(/[A-Za-z0-9._~%/-]*)?$", url)) &&
+      try(tonumber(regex(":([0-9]+)(/|$)", url)[0]), 443) >= 1 &&
+      try(tonumber(regex(":([0-9]+)(/|$)", url)[0]), 443) <= 65535
+    ])
+    error_message = "Use an exact HTTPS hostname or http://localhost with an explicit valid port; callbacks cannot contain wildcards, userinfo, queries or fragments."
   }
 }
 variable "budget_alert_email" {

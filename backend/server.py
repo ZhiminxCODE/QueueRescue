@@ -3,6 +3,7 @@ import argparse
 import json
 import mimetypes
 import math
+import re
 import secrets
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -19,6 +20,22 @@ PERSONAS = {
     "Viewer": {"name": "Sam Rivera", "role": "Viewer"},
     "Admin": {"name": "Taylor Brooks", "role": "Admin"},
 }
+
+
+def static_csp(base):
+    manifest = base / "connect-origins.json"
+    try:
+        origins = json.loads(manifest.read_text()) if manifest.exists() else []
+    except (ValueError, OSError):
+        raise Problem(503, "Invalid dashboard connection policy. Rebuild the frontend.") from None
+    pattern = r"https://(?:[a-z0-9]+\.execute-api\.[a-z]{2}-[a-z]+-\d\.amazonaws\.com|[a-z0-9-]+\.auth\.[a-z]{2}-[a-z]+-\d\.amazoncognito\.com)"
+    if (not isinstance(origins, list) or len(origins) > 2 or
+            any(not isinstance(origin, str) or not re.fullmatch(pattern, origin) for origin in origins)):
+        raise Problem(503, "Invalid dashboard connection policy. Rebuild the frontend.")
+    return ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; connect-src 'self'" +
+            (" " + " ".join(origins) if origins else "") +
+            "; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
 
 
 def make_handler(store, port):
@@ -204,11 +221,14 @@ def make_handler(store, port):
             if not file.exists():
                 return self.send_json({"error": "Frontend not built. Run npm install, then npm run build. For development, run npm run dev in another terminal."}, 503)
             body = file.read_bytes()
+            policy = static_csp(base)
             self.send_response(200)
             self.send_header("Content-Type", mimetypes.guess_type(str(file))[0] or "application/octet-stream")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'")
+            self.send_header("Content-Security-Policy", policy)
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
 

@@ -34,7 +34,14 @@ locals {
       { Effect = "Allow", Action = ["lambda:InvokeFunction"], Resource = [local.function_arn["verifier"], local.function_arn["collector"]] },
       { Effect = "Allow", Action = ["states:StartExecution"], Resource = local.workflow_arn }
     ]
-    collector = [local.ledger_write, local.audit_append, local.evidence_read,
+    collector = [{
+      Effect   = "Allow"
+      Action   = ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]
+      Resource = aws_dynamodb_table.data["ledger"].arn
+      Condition = { "ForAllValues:StringLike" = {
+        "dynamodb:LeadingKeys" = ["QUEUE#${sha256(aws_sqs_queue.queue["source-dlq"].url)}", "INCIDENT#*"]
+      } }
+      }, local.audit_append, local.evidence_read,
       { Effect = "Allow", Action = ["s3:PutObject"], Resource = "${aws_s3_bucket.evidence.arn}/evidence/*" },
       { Effect = "Allow", Action = ["sqs:ReceiveMessage", "sqs:ChangeMessageVisibility", "sqs:GetQueueAttributes"], Resource = aws_sqs_queue.queue["source-dlq"].arn }
     ]

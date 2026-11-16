@@ -5,6 +5,9 @@ import threading
 import time
 import unittest
 import uuid
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 from http.server import ThreadingHTTPServer
 
 from backend.server import make_handler
@@ -97,6 +100,23 @@ class ApiTests(unittest.TestCase):
 
     def test_untrusted_host_rejected(self):
         self.assertEqual(self.request("GET", "/health", headers={"Host": "untrusted.example"})[0], 403)
+
+    def test_static_aws_build_policy_and_callback_privacy_headers(self):
+        with tempfile.TemporaryDirectory() as directory, patch('backend.server.ROOT', Path(directory)):
+            base = Path(directory) / 'dist'
+            base.mkdir()
+            (base / 'index.html').write_text('<html>synthetic build</html>')
+            origin = 'https://example123.execute-api.us-east-1.amazonaws.com'
+            (base / 'connect-origins.json').write_text(json.dumps([origin]))
+            connection = http.client.HTTPConnection('127.0.0.1', self.port, timeout=5)
+            connection.request('GET', '/')
+            response = connection.getresponse()
+            response.read()
+            self.assertEqual(response.status, 200)
+            self.assertIn("connect-src 'self' " + origin + ';', response.getheader('Content-Security-Policy'))
+            self.assertEqual(response.getheader('Referrer-Policy'), 'no-referrer')
+            self.assertEqual(response.getheader('Cache-Control'), 'no-store')
+            connection.close()
 
     def test_payload_masked_over_http(self):
         token = self.login("Viewer")

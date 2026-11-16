@@ -1,9 +1,25 @@
 import unittest
+from unittest.mock import patch
 
-from cloud.contracts import CloudProblem, actor_from_gateway, cursor_decode, cursor_encode, request_identity, validate_event
+from cloud.contracts import CloudProblem, Settings, actor_from_gateway, cursor_decode, cursor_encode, request_identity, validate_event
 
 
 class CloudContractTests(unittest.TestCase):
+    def test_runtime_queues_are_exact_distinct_standard_targets(self):
+        env = {"QR_" + name.upper(): "example" for name in (
+            "region", "account_id", "ledger_table", "business_table", "audit_table", "evidence_bucket",
+            "kms_key_arn", "source_queue_url", "dlq_url", "replay_queue_url", "verifier_arn", "state_machine_arn")}
+        env.update(QR_REGION="us-east-1", QR_ACCOUNT_ID="123456789012")
+        prefix = "https://sqs.us-east-1.amazonaws.com/123456789012/"
+        env.update(QR_SOURCE_QUEUE_URL=prefix + "source", QR_DLQ_URL=prefix + "dead", QR_REPLAY_QUEUE_URL=prefix + "replay")
+        with patch.dict('os.environ', env, clear=True):
+            self.assertEqual(Settings.from_env().dlq_url, prefix + "dead")
+        for bad in [prefix + "source", prefix + "dead.fifo", prefix + "dead/other", prefix + "dead?x=1",
+                    prefix + "", prefix + "a" * 81, "https://sqs.us-east-1.amazonaws.com/999999999999/dead"]:
+            with self.subTest(url=bad), patch.dict('os.environ', {**env, "QR_DLQ_URL": bad}, clear=True):
+                with self.assertRaises(ValueError):
+                    Settings.from_env()
+
     def event(self, groups):
         return {"requestContext": {"authorizer": {"jwt": {"claims": {"sub": "person-1", "token_use": "access", "cognito:groups": groups}}}}}
 

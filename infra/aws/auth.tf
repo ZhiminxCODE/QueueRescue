@@ -4,7 +4,7 @@ resource "aws_cognito_user_pool" "operators" {
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
   deletion_protection      = var.protect_data ? "ACTIVE" : "INACTIVE"
-  mfa_configuration        = "OPTIONAL"
+  mfa_configuration        = "ON"
   software_token_mfa_configuration { enabled = true }
   admin_create_user_config { allow_admin_create_user_only = true }
   password_policy {

@@ -72,6 +72,19 @@ run "safe_sandbox_plan" {
     error_message = "The collector must not be able to delete source messages."
   }
   assert {
+    condition = alltrue([for statement in jsondecode(aws_iam_role_policy.function["collector"].policy).Statement :
+      toset(statement.Action) == toset(["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"]) &&
+      toset(statement.Condition["ForAllValues:StringLike"]["dynamodb:LeadingKeys"]) == toset([
+        "QUEUE#${sha256(aws_sqs_queue.queue["source-dlq"].url)}", "INCIDENT#*"
+      ]) if statement.Resource == aws_dynamodb_table.data["ledger"].arn && contains(statement.Action, "dynamodb:GetItem")
+    ])
+    error_message = "Collection may only read/write queue snapshots and incident membership, never delete or mutate recovery control partitions."
+  }
+  assert {
+    condition     = aws_cognito_user_pool.operators.mfa_configuration == "ON" && aws_cognito_user_pool.operators.software_token_mfa_configuration[0].enabled && aws_cognito_user_pool.operators.admin_create_user_config[0].allow_admin_create_user_only
+    error_message = "Hosted sign-in must require TOTP enrollment for admin-created users."
+  }
+  assert {
     condition     = aws_sfn_state_machine.recovery.type == "STANDARD" && !can(jsondecode(aws_sfn_state_machine.recovery.definition).States.ReplayChunk.Retry)
     error_message = "Use Standard orchestration without automatic uncertain-send task retries."
   }
@@ -209,4 +222,43 @@ run "reject_unencrypted_remote_callback" {
   command = plan
   variables { callback_urls = ["http://untrusted.example/"] }
   expect_failures = [var.callback_urls]
+}
+
+run "reject_wildcard_callback" {
+  command = plan
+  variables { callback_urls = ["https://*.example.com/"] }
+  expect_failures = [var.callback_urls]
+}
+
+run "reject_callback_userinfo" {
+  command = plan
+  variables { callback_urls = ["https://operator@example.com/"] }
+  expect_failures = [var.callback_urls]
+}
+
+run "reject_callback_query" {
+  command = plan
+  variables { callback_urls = ["https://example.com/?redirect=elsewhere"] }
+  expect_failures = [var.callback_urls]
+}
+
+run "reject_callback_fragment" {
+  command = plan
+  variables { callback_urls = ["https://example.com/#callback"] }
+  expect_failures = [var.callback_urls]
+}
+
+run "reject_callback_port" {
+  command = plan
+  variables { callback_urls = ["http://localhost:65536/"] }
+  expect_failures = [var.callback_urls]
+}
+
+run "exact_https_callback" {
+  command = plan
+  variables { callback_urls = ["https://dashboard.example.com:8443/callback"] }
+  assert {
+    condition     = contains(aws_apigatewayv2_api.api.cors_configuration[0].allow_origins, "https://dashboard.example.com:8443")
+    error_message = "Valid HTTPS callbacks must derive an exact CORS origin without their path."
+  }
 }
