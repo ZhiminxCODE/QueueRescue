@@ -15,7 +15,7 @@ Status reviewed November 16, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest implementation checks passed: 152 Python tests, 21 frontend tests, frontend build, deterministic Lambda packaging, Terraform validation and six mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 167 Python tests, 25 frontend tests, frontend build, deterministic Lambda packaging, Terraform validation and six mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## 1. Resolve deployment costs — first blocker
 
@@ -56,8 +56,8 @@ Exit: a recorded real-account demonstration with confirmed safeguards and observ
 - [x] **Me:** Add cloud incident records and normalized schema-category grouping, with server-side filtering, bounded pagination and dashboard group drill-down. [Contract and offline verification](cloud-investigation.md). Groups are indexed samples, not confirmed root causes or a complete queue inventory; no automatic legacy backfill.
 - [x] **Me:** Add structured correlation instrumentation and scoped CloudWatch evidence lookup for source messages and exact replay attempts, with explicit dashboard lookup, returned log-stream links, and incomplete/missing/denied states. [Contract and offline verification](cloud-log-evidence.md). Distributed traces remain uninstrumented; no trace links are invented. Real-account evidence and console-link validation still require the reviewed deployment milestone.
 - [x] **Me:** Show original enqueue age and estimated DLQ expiry separately from snapshot access deadlines, with 24-hour warnings, explicit unknown/passed estimates and unverified original presence. [Contract and offline verification](cloud-retention.md). Tests cover scoped settings reads, masking/permissions, expiry during inspection and versioned evidence loss; live propagation/lifecycle validation remains part of deployment verification.
-- [ ] **Me:** Implement a complete cloud post-incident report: evidence-backed hypotheses, recovered/skipped/blocked/unresolved counts, duration, verification coverage, and measured cost. Current cloud exports are plan/job snapshots and audit pages.
-- [ ] **Me:** Add representative labeled incident fixtures and test grouping/correlation/report behavior.
+- [x] **Me:** Implement bounded, incident-scoped reports with evidence-backed findings, reconciled recovered/skipped/blocked/unresolved counts, recorded job duration, distinct-operation verification coverage, JSON/Markdown export and explicit partial-history diagnostics. [Contract and offline verification](cloud-incident-reports.md). Measured-cost observations and estimates retain Admin-recorded provenance; actual billing data/attribution and live behavior still require deployment validation.
+- [x] **Me:** Add seven representative synthetic incident labels and test grouping/indexing, correlation and reporting, including duplicates, uncertain sends, late verification, partial evidence, privacy, cost provenance and transactional bounds.
 
 This work can be implemented and tested offline while account blockers are resolved.
 
