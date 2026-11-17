@@ -2,6 +2,8 @@
 
 The target for the first cloud demo is to avoid out-of-pocket spending. This is a constraint to verify against the account's actual plan, credits, and current usage, not something Terraform or a budget alert can guarantee. No resources should be deployed until those account details have been checked.
 
+Optional dashboard hosting is **excluded** (`dashboard_hosting_included=false`); provision/delivery default off. Review CDN/edge traffic, bucket versions/storage/requests, invalidations and actual shared allowances before enabling it. See the [hosting runbook](dashboard-hosting.md).
+
 Optional audit capture is **excluded** from the baseline estimate (`audit_logging_included=false`). Its provision/capture switches default off. Enabling it adds CloudTrail data events, archive requests/retained versions, a sixth Lambda, four alarms and a custom metric; review these costs and existing trail copies separately. See the [audit runbook](cloud-audit.md). Pausing capture preserves storage and monitoring costs.
 
 The [cost decision worksheet](aws-cost-assessment.md) prices the complete current minimal stack for a 25-message, one-hour demo, including setup, cleanup, retained storage and runtime sensitivity. Its offline calculator applies no unverified allowances or credits. A small estimate does not establish a zero bill or enforce a spending cap.

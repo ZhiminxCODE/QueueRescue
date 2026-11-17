@@ -74,3 +74,7 @@ After account access is available, run a reviewed Terraform plan, deploy the san
 ## Optional protected audit profile
 
 The [audit profile](cloud-audit.md) adds a separate private versioned Governance-retained S3 bucket, a regional/global-service write trail in `us-east-1`, exact audit-table and scoped object data events, and an audit-stream Lambda that archives full record images. It includes conditional checksummed writes, bounded retries, a native full-payload S3 failure destination and four failure/age alarms. Both provisioning and capture default off; capture can be stopped while archives remain protected. It is prepared/tested offline, adds separate cost/quota requirements, has no historical backfill and is not protection against an account administrator. The local simulation and base recovery protocol are unchanged.
+
+## Optional dashboard hosting
+
+[Private S3 + CloudFront](dashboard-hosting.md) is prepared offline with OAC, blocked public bucket access, versioned SSE-S3 objects, exact `/callback` rewriting, separate shell/asset caching, security headers and an exact-origin HTML CSP. Provisioning/delivery default off. Distribution outputs feed Cognito callback registration and API CORS; the offline release builder consumes public deployment outputs without changing local settings or `dist/`. The public static shell still requires Cognito/API authorization for data. Actual deployment, cost review and live validation remain outstanding.

@@ -25,7 +25,7 @@ npm run build
 npm start
 ```
 
-The Terraform defaults include `http://localhost:5173/`, `http://localhost:8000/`, and the CLI helper's port-8765 callback. For an existing deployment, review and apply callback/CORS changes before using a newly added origin. Other frontend origins need explicit `callback_urls` entries, which also drive API CORS; HTTPS is required except for localhost development. Open the exact configured origin/path. `127.0.0.1` is not interchangeable with `localhost` in OAuth. There is no frontend hosting or production deployment added by this integration.
+The Terraform defaults include `http://localhost:5173/`, `http://localhost:8000/`, and the CLI helper's port-8765 callback. For an existing deployment, review and apply callback/CORS changes before using a newly added origin. Other frontend origins need explicit `callback_urls` entries, which also drive API CORS; HTTPS is required except for localhost development. Open the exact configured origin/path. `127.0.0.1` is not interchangeable with `localhost` in OAuth. Optional private S3 + CloudFront hosting is now prepared separately, disabled by default; see the [hosting runbook](dashboard-hosting.md). No AWS deployment has been performed.
 
 Copy [.env.example](../.env.example) to inspect the configuration schema. Restart Vite or rebuild after changing it. Missing/invalid AWS settings show a connection-configuration error and never silently fall back to simulated data. To return to local simulation, remove the AWS overrides from `.env.local` or set `VITE_QR_MODE=local`, then restart/rebuild.
 

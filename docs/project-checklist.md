@@ -15,7 +15,7 @@ Status reviewed November 16, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest implementation checks passed: 167 Python tests, 25 frontend tests, frontend build, deterministic Lambda packaging, Terraform validation and six mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 186 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 26 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## 1. Resolve deployment costs — first blocker
 
@@ -63,7 +63,7 @@ This work can be implemented and tested offline while account blockers are resol
 
 ## 5. Finish and verify the customer-deployed prototype
 
-- [ ] **Me:** Implement the brief's private S3 + CloudFront frontend hosting, including SPA callback routing, HTTPS and restricted bucket access, after its costs are reviewed. Current AWS dashboard hosting is local.
+- [x] **Me:** Prepare optional private S3 + CloudFront hosting, exact callback routing, OAC, cache/security policies and an isolated release builder with offline tests. [Hosting runbook](dashboard-hosting.md). Provisioning/delivery default off; actual cost review, publication and live browser/service validation remain deployment work.
 - [x] **Me:** Prepare opt-in scoped CloudTrail capture and protected application audit archival, separate capture/retention switches, failure handling/alarms and offline policy/runtime tests. [Coverage, costs, verification and teardown runbook](cloud-audit.md). Governance retention is bypassable by privileged administrators; real AWS delivery, enforcement, completeness and notifications remain unverified and require the reviewed deployment milestone.
 - [x] **Me:** Review role escalation, queue access, snapshot masking, CORS/auth, retention and dependencies; fix the material offline findings. [Review, fixes, verification and remaining deployment checks](security-review.md). Real IAM/MFA/CORS enforcement, CloudTrail/protected audit retention and account cost gates remain unverified in AWS.
 - [x] **Me:** Measure five fresh 10,000-event local backend trials and five production-browser interaction cycles; document the method, results, zero-send checks and scaling limits in the [benchmark report](benchmark-report.md). Browser timings are scripted action-to-ready measurements, not INP or AWS throughput. Any AWS load test requires a separate cost-reviewed workload; initial cloud plans remain limited to 25 messages.

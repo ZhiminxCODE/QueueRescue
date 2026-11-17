@@ -143,3 +143,5 @@ Relevant platform semantics checked against the primary AWS documentation:
 The supplied Word specification is retained unchanged.
 
 Opt-in [CloudTrail and protected audit archival](docs/cloud-audit.md) are prepared offline with scoped capture, full stream-record archives, Governance retention, bounded failure handling and alarms. Provisioning and capture default off; this adds costs and a sixth active Lambda reservation that the baseline cost worksheet does not cover. The controls require a separate reviewed deployment and live verification.
+
+Optional [private S3 + CloudFront dashboard hosting](docs/dashboard-hosting.md) is prepared and tested offline. Provisioning and delivery default off. An isolated release tool builds AWS-only files under ignored `.data/` without changing the running local dashboard; publication requires a reviewed account/cost/deployment plan.
