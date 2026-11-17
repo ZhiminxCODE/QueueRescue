@@ -159,9 +159,10 @@ resource "aws_cloudtrail" "audit" {
 }
 
 resource "aws_iam_role" "audit_archive" {
-  count              = var.audit_logging_enabled ? 1 : 0
-  name               = local.audit_writer_name
-  assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole" }] })
+  count                = var.audit_logging_enabled ? 1 : 0
+  name                 = local.audit_writer_name
+  permissions_boundary = var.execution_permissions_boundary_arn
+  assume_role_policy   = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole" }] })
 }
 resource "aws_iam_role_policy" "audit_archive" {
   count = var.audit_logging_enabled ? 1 : 0

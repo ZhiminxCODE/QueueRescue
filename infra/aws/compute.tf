@@ -58,8 +58,9 @@ locals {
 }
 
 resource "aws_iam_role" "function" {
-  for_each = local.handlers
-  name     = "${local.prefix}-${each.key}"
+  for_each             = local.handlers
+  name                 = "${local.prefix}-${each.key}"
+  permissions_boundary = var.execution_permissions_boundary_arn
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole"
   }] })
@@ -107,7 +108,8 @@ resource "aws_lambda_event_source_mapping" "shipment" {
 }
 
 resource "aws_iam_role" "workflow" {
-  name = "${local.prefix}-workflow"
+  name                 = "${local.prefix}-workflow"
+  permissions_boundary = var.execution_permissions_boundary_arn
   assume_role_policy = jsonencode({ Version = "2012-10-17", Statement = [{
     Effect = "Allow", Principal = { Service = "states.amazonaws.com" }, Action = "sts:AssumeRole"
   }] })

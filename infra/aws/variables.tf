@@ -11,6 +11,15 @@ variable "aws_profile" {
   type        = string
   default     = "queuerescue-dev"
 }
+variable "execution_permissions_boundary_arn" {
+  description = "Optional administrator-owned runtime boundary; review its contents before attachment. Null preserves existing configuration and is not permission to grant deployment access."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.execution_permissions_boundary_arn == null || var.execution_permissions_boundary_arn == "arn:aws:iam::${var.aws_account_id}:policy/queuerescue-${var.environment}-execution-boundary"
+    error_message = "Use the exact administrator-reviewed execution-boundary policy for this account and environment."
+  }
+}
 variable "aws_region" {
   type    = string
   default = "us-east-1"

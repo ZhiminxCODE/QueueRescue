@@ -1,6 +1,9 @@
 # Copy to terraform.tfvars (ignored by Git), then replace the example account ID.
 aws_account_id    = "123456789012"
 aws_profile       = "queuerescue-dev"
+execution_permissions_boundary_arn = null
+# Attach only an administrator-created, reviewed boundary before delegating IAM.
+# The offline proposal tool covers the minimal base stack; see docs/aws-role-access.md.
 aws_region        = "us-east-1"
 environment       = "dev"
 cost_profile      = "minimal"
