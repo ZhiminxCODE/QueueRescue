@@ -98,6 +98,10 @@ terraform -chdir=infra/aws output -json deployment > .data/aws-deployment.json
 
 No CI job applies Terraform or holds AWS credentials. Confirm the SNS email subscription if email notifications were configured. Budget notifications use the supplied account-wide threshold, so existing account spending also contributes.
 
+## Prepare bounded IAM delegation offline
+
+The [role-access preparation tool](aws-role-access.md) generates a private minimal-stack runtime ceiling and exact-role IAM delegation fragment without AWS calls. Terraform supports an administrator-owned `execution_permissions_boundary_arn` on every runtime role, default null. A separate reviewed administrator must establish the ceiling and verify existing roles before delegation; complete service-provisioning permissions, cost/quota checks and saved-plan review remain required. Generating files does not grant access or authorize deployment.
+
 ## Create separate operator and approver identities
 
 Using the Cognito console or your authenticated AWS CLI, create two users in the output user pool. Add one to the `Operator` group and the other to `Approver`; use `Viewer` for read-only inspection. Keep initial passwords and password changes in AWS's sign-in flow. The prepared pool requires software-token MFA: complete TOTP enrollment in hosted sign-in, then verify a subsequent sign-in challenges for the second factor. AWS has first-sign-in verification exceptions; do not count the enrollment session as proof of a subsequent MFA challenge. The public Cognito client uses authorization code + PKCE and has no client secret; API Gateway requires a scoped access token and the Lambda separately enforces group capabilities. This configuration has only been tested offline; existing pools require a reviewed Terraform apply.
