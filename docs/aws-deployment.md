@@ -4,6 +4,8 @@ The AWS backend, dashboard integration, and infrastructure are implemented and t
 
 For a demo constrained by Free Tier eligibility, first read [cost controls](aws-cost-controls.md). A fresh sandbox can select `cost_profile="minimal"`, which keeps service-owned encryption while removing customer-managed KMS keys, paid backups, and metric alarms. Check the account's plan, credits, and shared usage before deployment; there is no guaranteed $0 cap. Leave `consumers_enabled=false` and `replay_enabled=false` until an intentional demo is ready.
 
+The optional [CloudTrail and protected audit archive](cloud-audit.md) is prepared offline and disabled by default. Its scoped profile requires `us-east-1`, a separate cost/retention review, one more active Lambda reservation, confirmed notifications and live verification. Keep `audit_logging_enabled=false` and `audit_collection_enabled=false` until that review. Once provisioned, pause with collection false while retaining provisioning true; the protected bucket deliberately blocks generic destruction.
+
 ## Inputs needed before deployment
 
 - A development AWS account ID and region. The default example region is `us-east-1`; the stack rejects production environment labels and unexpected account IDs.
@@ -74,7 +76,9 @@ The default CLI path is `.data/bin/aws`; pass `--aws-cli aws` for a normal insta
 
 Review the report alongside the billing console. Registering an MFA device does not prove an existing CLI session used MFA; sign in again after enrollment. Missing Free Tier offers are not proof of eligibility, and regional capacity totals do not establish account-wide allowances. In particular, [API Gateway's legacy free usage expires after 12 months](https://aws.amazon.com/api-gateway/pricing/). This tool always leaves `deployment_ready=false`: human cost/permission review remains necessary. It does not apply Terraform or guarantee a $0 bill.
 
-The Lambda capacity section also checks whether a fresh/idle stack can allocate the active demo's five reserved concurrency units while leaving AWS's required unreserved pool available. Resolve an insufficient quota before enabling consumers or replay; idle settings use zero reservations and no positive SQS mapping concurrency setting. A `ResourceNotFoundException` from the account-plan API remains unknown eligibility, even if other reads succeed; it is not permission to deploy.
+For an active audited demo, add `--audit-logging-enabled` to the readiness check so it includes the archive writer's extra reserved unit (six total). This does not authorize provisioning or capture.
+
+The Lambda capacity section also checks whether a fresh/idle stack can allocate the base active demo's five reserved concurrency units while leaving AWS's required unreserved pool available. Resolve an insufficient quota before enabling consumers or replay; idle settings use zero reservations and no positive SQS mapping concurrency setting. A `ResourceNotFoundException` from the account-plan API remains unknown eligibility, even if other reads succeed; it is not permission to deploy.
 
 Build the Lambda package, then prepare a saved plan:
 
@@ -192,7 +196,7 @@ Inspect Step Functions execution status, the job ledger, replay DLQ, and CloudWa
 
 ## Retention and teardown
 
-Evidence objects and expired index/request records have a short retention policy. DynamoDB TTL is eventual; expired snapshots are also rejected in application checks. Business idempotency and audit tables do not have evidence TTL. Audit application roles can append/read but not update/delete; this is not protection against account administrators. This sandbox does not create an independent CloudTrail archive or immutable external audit vault.
+Evidence objects and expired index/request records have a short retention policy. DynamoDB TTL is eventual; expired snapshots are also rejected in application checks. Business idempotency and audit tables do not have evidence TTL. Audit application roles can append/read but not update/delete; this is not protection against account administrators. The default profile leaves the optional archive absent. The [opt-in audit profile](cloud-audit.md) prepares a separate Governance-retained bucket and scoped trail, with administrator bypass and explicit capture gaps; it is not an immutable external vault. If provisioned, follow that runbook before any generic teardown: its bucket intentionally blocks destruction.
 
 Deletion protection is on for tables and the user pool; S3 evidence is not force-deleted by default. Teardown therefore requires a deliberate choice about exports and evidence destruction. Review a destroy plan and its retained-data implications before disabling `protect_data` or enabling `allow_destroy_evidence`. Scheduled KMS deletion can eventually make retained encrypted data unreadable; retain the key with any retained evidence. Do not assume a failed partial destroy leaves all other resources unchanged. Check the account afterward for remaining KMS keys, tables, storage, alarms, and budget resources that can continue to incur charges.
 
@@ -204,6 +208,6 @@ Do not apply that plan until the data-retention decision and protection settings
 
 ## Remaining AWS milestones
 
-Structured telemetry and exact-message/attempt CloudWatch lookup are implemented and verified offline; see the [log-evidence contract](cloud-log-evidence.md). Real-account log delivery, scoped IAM access and console deep links still require live validation. Real account and browser sign-in/CORS validation, large-volume inventory/replay, manual resolution, automated billing attribution and stronger protected audit archival remain future work. The browser integration is implemented but has not been exercised against a live deployed stack. The current offline tests and mocked Terraform plans do not prove real IAM propagation, Cognito email delivery, service quotas, account policy compatibility, or actual AWS cost.
+Structured telemetry and exact-message/attempt CloudWatch lookup are implemented and verified offline; see the [log-evidence contract](cloud-log-evidence.md). Real-account log delivery, scoped IAM access and console deep links still require live validation. Real account and browser sign-in/CORS validation, large-volume inventory/replay, manual resolution, automated billing attribution and stronger administrator separation for audit archives remain future work. The browser integration is implemented but has not been exercised against a live deployed stack. The current offline tests and mocked Terraform plans do not prove real IAM propagation, Cognito email delivery, service quotas, account policy compatibility, or actual AWS cost.
 
 Incident-scoped [reports](cloud-incident-reports.md) are implemented offline with JSON/Markdown export, indexed recovery evidence and explicit history limits. Cost observations require an application Admin and retain declared source/window/hash provenance; the application does not independently validate a bill or allocation. The initial Operator/Approver demo accounts do not gain Admin automatically. Live source/authorization and actual measured-cost attribution remain deployment-validation tasks.

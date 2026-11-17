@@ -56,13 +56,15 @@ One cross-runtime dependency deserves attention: `cloud/api.py` imports `mask` f
 
 ## Next milestone
 
-The next offline implementation is CloudTrail coverage and protected audit retention: identify gaps between application audit entries and AWS control/data access, prepare narrowly scoped Terraform controls, add mocked policy/retention checks, and document validation and teardown implications. The current Terraform has application audit storage and operational CloudWatch logging/alarms, but no CloudTrail resource. Do not claim existing audit records are tamper-proof against account administrators.
+Opt-in CloudTrail coverage and protected audit retention are now [implemented and verified offline](cloud-audit.md), including scoped data selectors, an audit-stream writer, Governance-retained S3 versions, failure capture and alarms. Provisioning/capture default off; real delivery, enforcement and audit completeness remain deployment checks. The next implementation milestone is private S3 + CloudFront frontend hosting after its costs are reviewed. Do not claim audit records are tamper-proof against account administrators.
 
 A real deployment separately needs reviewed account plan/credits/shared allowances, scoped deployment permissions, a quota-compatible Lambda design and a concrete saved Terraform/cost plan. After the audit work, private S3 + CloudFront frontend hosting remains another implementation milestone. No deployment or paid workload is authorized by this map.
 
 ## Graphify snapshot
 
 The generated interactive graph (`graphify-out/graph.html`), JSON (`graphify-out/graph.json`) and audit report (`graphify-out/GRAPH_REPORT.md`) live in ignored `graphify-out/`. The snapshot contains 946 nodes, 2,990 relationships and 39 labeled communities from 97 supported files (78 code, 19 documents; about 65,446 words). This authored guide was written after that source snapshot and is not self-indexed. Code was parsed statically, and documents (including a converted prototype brief) were mapped semantically. The prototype brief describes desired scope; it is not proof of implemented or deployed behavior. Secret/local deployment settings, databases, dependencies, runtime evidence and builds were excluded. This authored map and skill inventory are documentation; generated analysis/cache artifacts remain local.
+
+This graph snapshot predates the optional audit implementation; query results about audit resources must be checked against `infra/aws/audit.tf`, `cloud/audit_archive.py` and the audit runbook until it is refreshed.
 
 The graph is an analysis aid, not a complete call graph. Dynamic SDK calls, callbacks, decorators and infrastructure runtime wiring may need source inspection. Parser limitations and graph health findings are recorded in the generated report. A graph-derived connection is not independent evidence of real service behavior or test success.
 

@@ -1,5 +1,7 @@
 # Cost decision for the AWS sandbox
 
+The optional CloudTrail/audit-archive profile is not included here. The calculator reports `audit_logging_included=false`; audit provisioning and capture default off. Enabling them requires a revised event, storage, monitoring and retained-resource estimate before any deployment. See [audit costs and controls](cloud-audit.md).
+
 Reviewed November 15, 2026, for `us-east-1`, the current **minimal** Terraform profile and a locally hosted dashboard. This covers the complete currently implemented stack. Future CloudFront hosting, added audit infrastructure and larger load tests need new estimates. No resources were deployed to obtain prices.
 
 **Decision remains strict $0/local.** No paid tolerance, credit coverage, deployment or destructive cleanup is authorized by this worksheet. Personal account inspection results stay in ignored `.data/` files.

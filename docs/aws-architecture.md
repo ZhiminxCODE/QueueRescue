@@ -70,3 +70,7 @@ After account access is available, run a reviewed Terraform plan, deploy the san
 - [DynamoDB transactional writes](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html)
 - [Step Functions error handling](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-error-handling.html)
 - [API Gateway JWT authorization](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html)
+
+## Optional protected audit profile
+
+The [audit profile](cloud-audit.md) adds a separate private versioned Governance-retained S3 bucket, a regional/global-service write trail in `us-east-1`, exact audit-table and scoped object data events, and an audit-stream Lambda that archives full record images. It includes conditional checksummed writes, bounded retries, a native full-payload S3 failure destination and four failure/age alarms. Both provisioning and capture default off; capture can be stopped while archives remain protected. It is prepared/tested offline, adds separate cost/quota requirements, has no historical backfill and is not protection against an account administrator. The local simulation and base recovery protocol are unchanged.
