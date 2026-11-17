@@ -20,3 +20,7 @@ audit_retention_days     = 7
 # Opt-in audit resources have separate storage/event/monitoring costs and an
 # additional active Lambda reservation. Review before provisioning or capture.
 # Keep audit_logging_enabled=true once provisioned; pause via collection=false.
+dashboard_hosting_enabled = false
+dashboard_delivery_enabled = false
+# Optional private S3/CloudFront hosting is excluded from the baseline estimate.
+# Review costs before provisioning; upload a reviewed release before delivery.

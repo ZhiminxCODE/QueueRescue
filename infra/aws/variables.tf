@@ -114,3 +114,17 @@ variable "audit_retention_days" {
     error_message = "Audit retention must be an integer from 1 to 90 days."
   }
 }
+variable "dashboard_hosting_enabled" {
+  description = "Provision private dashboard storage and a disabled-by-default CloudFront distribution after cost review."
+  type        = bool
+  default     = false
+}
+variable "dashboard_delivery_enabled" {
+  description = "Enable public static delivery only after reviewing and uploading an AWS-mode release. API authentication remains required."
+  type        = bool
+  default     = false
+  validation {
+    condition     = !var.dashboard_delivery_enabled || var.dashboard_hosting_enabled
+    error_message = "Provision reviewed dashboard hosting before enabling delivery."
+  }
+}

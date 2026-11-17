@@ -44,8 +44,8 @@ resource "aws_cognito_user_pool_client" "dashboard" {
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid", "email", "queuerescue/access"]
   supported_identity_providers         = ["COGNITO"]
-  callback_urls                        = var.callback_urls
-  logout_urls                          = var.callback_urls
+  callback_urls                        = local.operator_callback_urls
+  logout_urls                          = local.operator_callback_urls
   prevent_user_existence_errors        = "ENABLED"
   enable_token_revocation              = true
   access_token_validity                = 15
@@ -67,7 +67,7 @@ resource "aws_apigatewayv2_api" "api" {
   name          = local.prefix
   protocol_type = "HTTP"
   cors_configuration {
-    allow_origins = distinct([for url in var.callback_urls : regex("^(https?://[^/]+)", url)[0]])
+    allow_origins = distinct([for url in local.operator_callback_urls : regex("^(https?://[^/]+)", url)[0]])
     allow_methods = ["GET", "POST"]
     allow_headers = ["authorization", "content-type", "idempotency-key"]
   }

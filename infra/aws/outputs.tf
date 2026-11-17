@@ -17,6 +17,14 @@ output "deployment" {
     collector_lambda  = aws_lambda_function.function["collector"].function_name
     replay_lambda     = aws_lambda_function.function["replay"].function_name
     state_machine_arn = aws_sfn_state_machine.recovery.arn
+    dashboard_hosting = {
+      provisioned      = var.dashboard_hosting_enabled
+      delivery_enabled = var.dashboard_delivery_enabled
+      bucket           = try(aws_s3_bucket.dashboard[0].id, null)
+      distribution_id  = try(aws_cloudfront_distribution.dashboard[0].id, null)
+      domain_name      = try(aws_cloudfront_distribution.dashboard[0].domain_name, null)
+      callback_url     = try(local.dashboard_callback_urls[0], null)
+    }
     audit_controls = {
       provisioned       = var.audit_logging_enabled
       capture_enabled   = var.audit_collection_enabled
