@@ -69,6 +69,8 @@ To quickly test one eligible event, use operation `shipment:ORD-12345` in a new 
 
 ## API
 
+For the local/cloud boundaries, available agent skills and next implementation milestone, see the [project map](docs/project-map.md).
+
 Routes use the `/api` prefix. Reads require `Authorization: Bearer <demo session token>`. Domain writes also require `Content-Type: application/json` and an `Idempotency-Key` (8–200 characters). The UI supplies these headers.
 
 | Method | Route | Purpose |
