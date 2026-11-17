@@ -17,5 +17,14 @@ output "deployment" {
     collector_lambda  = aws_lambda_function.function["collector"].function_name
     replay_lambda     = aws_lambda_function.function["replay"].function_name
     state_machine_arn = aws_sfn_state_machine.recovery.arn
+    audit_controls = {
+      provisioned       = var.audit_logging_enabled
+      capture_enabled   = var.audit_collection_enabled
+      retention_days    = var.audit_retention_days
+      archive_bucket    = try(aws_s3_bucket.audit[0].id, null)
+      trail_arn         = try(aws_cloudtrail.audit[0].arn, null)
+      archive_lambda    = try(aws_lambda_function.audit_archive[0].function_name, null)
+      stream_mapping_id = try(aws_lambda_event_source_mapping.audit_archive[0].uuid, null)
+    }
   }
 }

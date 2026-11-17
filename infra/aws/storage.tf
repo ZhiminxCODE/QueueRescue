@@ -38,6 +38,8 @@ resource "aws_dynamodb_table" "data" {
   hash_key                    = "pk"
   range_key                   = "sk"
   deletion_protection_enabled = var.protect_data
+  stream_enabled              = each.key == "audit" && var.audit_logging_enabled
+  stream_view_type            = each.key == "audit" && var.audit_logging_enabled ? "NEW_AND_OLD_IMAGES" : null
   attribute {
     name = "pk"
     type = "S"

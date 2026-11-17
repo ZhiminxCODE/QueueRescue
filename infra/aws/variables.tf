@@ -87,3 +87,30 @@ variable "monthly_budget_usd" {
     error_message = "Budget notification threshold must be positive."
   }
 }
+variable "audit_logging_enabled" {
+  description = "Provision the optional protected audit archive and trail only after reviewing their extra cost, permissions and retention."
+  type        = bool
+  default     = false
+  validation {
+    condition     = !var.audit_logging_enabled || var.aws_region == "us-east-1"
+    error_message = "The reviewed single-region audit profile requires us-east-1 to receive global IAM/STS events. Other regions require a separately reviewed trail design."
+  }
+}
+variable "audit_collection_enabled" {
+  description = "Capture switch: starts CloudTrail and audit stream polling; false preserves archives and reserves zero archive concurrency."
+  type        = bool
+  default     = false
+  validation {
+    condition     = !var.audit_collection_enabled || var.audit_logging_enabled
+    error_message = "Provision the reviewed audit controls before enabling capture."
+  }
+}
+variable "audit_retention_days" {
+  description = "Default Governance retention for new archive versions; changing this does not shorten existing version retention."
+  type        = number
+  default     = 7
+  validation {
+    condition     = var.audit_retention_days >= 1 && var.audit_retention_days <= 90 && floor(var.audit_retention_days) == var.audit_retention_days
+    error_message = "Audit retention must be an integer from 1 to 90 days."
+  }
+}

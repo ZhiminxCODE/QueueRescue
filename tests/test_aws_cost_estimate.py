@@ -28,6 +28,7 @@ class DemoCostTests(unittest.TestCase):
         result = estimate()
         self.assertFalse(result["free_allowances_applied"])
         self.assertFalse(result["credits_applied"])
+        self.assertFalse(result["audit_logging_included"])
         self.assertFalse(result["spending_cap"])
         self.assertGreater(result["total_usd_before_tax"], D(0))
         self.assertEqual(result["total_usd_before_tax"], sum(result["line_items_usd"].values()))

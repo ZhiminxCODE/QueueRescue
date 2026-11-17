@@ -100,7 +100,7 @@ class CLIReader:
             raise ReadError('InvalidCLIResponse') from None
 
 
-def inspect_account(read, account_id, user_name, region):
+def inspect_account(read, account_id, user_name, region, audit_logging_enabled=False):
     validate_target(account_id, user_name, region)
     caller = read('sts', 'get-caller-identity')
     expected_arn = f'arn:aws:iam::{account_id}:user/{user_name}'
@@ -187,11 +187,13 @@ def inspect_account(read, account_id, user_name, region):
         if type(unreserved) is not int or unreserved < 0:
             raise ValueError()
         reservable = max(0, unreserved - 100)
+        required = 6 if audit_logging_enabled else 5
         return {'limits': response['AccountLimit'], 'usage': response['AccountUsage'],
                 'additional_reservable_capacity': reservable,
-                'active_demo_reservation_required': 5,
-                'active_demo_reservations_fit': reservable >= 5,
-                'note': 'Fresh/idle stack check: active consumers reserve 4 and replay reserves 1. AWS requires 100 unreserved units; idle switches reserve zero. Existing stack reservations need separate review. Recheck before enabling.'}
+                'active_demo_reservation_required': required,
+                'audit_archive_reservation_required': 1 if audit_logging_enabled else 0,
+                'active_demo_reservations_fit': reservable >= required,
+                'note': 'Fresh/idle stack check: active consumers reserve 4, replay 1, and optional active audit capture 1. AWS requires 100 unreserved units; idle switches reserve zero. Existing stack reservations need separate review. Recheck before enabling.'}
 
     for name, operation in [('identity', identity), ('mfa', mfa), ('account_plan', plan),
                             ('free_tier_usage', offers), ('regional_tables', capacity),
@@ -209,6 +211,7 @@ def main():
     parser.add_argument('--profile', default='queuerescue-dev')
     parser.add_argument('--aws-cli', default='.data/bin/aws')
     parser.add_argument('--output', help='Private local JSON file; do not add it to Git')
+    parser.add_argument('--audit-logging-enabled', action='store_true', help='Include the optional active audit archiver in the fresh/idle quota check')
     args = parser.parse_args()
     try:
         validate_target(args.account_id, args.user_name, args.region)
@@ -218,7 +221,7 @@ def main():
         else:
             path = args.output or '.data/aws-readiness.json'
             value = inspect_account(CLIReader(args.aws_cli, args.profile, args.region),
-                                    args.account_id, args.user_name, args.region)
+                                    args.account_id, args.user_name, args.region, args.audit_logging_enabled)
     except (ReadError, ValueError) as error:
         detail = ('AWS session expired. Refresh the reviewed non-root profile with aws login.'
                   if str(error) == 'ExpiredLoginSession' else str(error))

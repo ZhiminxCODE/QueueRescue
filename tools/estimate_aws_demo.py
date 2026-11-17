@@ -76,6 +76,7 @@ def estimate(resource_hours=D(3), stressed=False):
         "lambda_gb_seconds": gb_seconds,
         "free_allowances_applied": False,
         "credits_applied": False,
+        "audit_logging_included": False,
         "spending_cap": False,
         "line_items_usd": lines,
         "total_usd_before_tax": sum(lines.values(), D(0)),

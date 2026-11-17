@@ -14,3 +14,9 @@ monthly_budget_usd = 0.01
 protect_data          = true
 allow_destroy_evidence = false
 replay_enabled         = false
+audit_logging_enabled    = false
+audit_collection_enabled = false
+audit_retention_days     = 7
+# Opt-in audit resources have separate storage/event/monitoring costs and an
+# additional active Lambda reservation. Review before provisioning or capture.
+# Keep audit_logging_enabled=true once provisioned; pause via collection=false.

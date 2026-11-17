@@ -99,6 +99,21 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(capacity['additional_reservable_capacity'], 5)
         self.assertTrue(capacity['active_demo_reservations_fit'])
 
+    def test_optional_audit_capture_requires_one_more_reserved_unit(self):
+        read = FakeReader()
+        limits = read.values[('lambda', 'get-account-settings')]['AccountLimit']
+        limits['UnreservedConcurrentExecutions'] = 105
+        report = inspect_account(read, ACCOUNT, USER, 'us-east-1', audit_logging_enabled=True)
+        capacity = report['checks']['lambda_capacity']['data']
+        self.assertEqual(capacity['active_demo_reservation_required'], 6)
+        self.assertEqual(capacity['audit_archive_reservation_required'], 1)
+        self.assertFalse(capacity['active_demo_reservations_fit'])
+        self.assertFalse(report['deployment_ready'])
+        limits['UnreservedConcurrentExecutions'] = 106
+        report = inspect_account(read, ACCOUNT, USER, 'us-east-1', audit_logging_enabled=True)
+        self.assertTrue(report['checks']['lambda_capacity']['data']['active_demo_reservations_fit'])
+        self.assertFalse(report['deployment_ready'])
+
     def test_invalid_service_response_is_unknown_and_other_reads_continue(self):
         read = FakeReader()
         read.values[('freetier', 'get-account-plan-state')] = {'accountId': '999999999999'}

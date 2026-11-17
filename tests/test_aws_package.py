@@ -15,6 +15,7 @@ class AwsPackageTests(unittest.TestCase):
                 names = archive.namelist()
                 self.assertIn('cloud/api.py', names)
                 self.assertIn('cloud/replay.py', names)
+                self.assertIn('cloud/audit_archive.py', names)
                 self.assertIn('backend/service.py', names)
                 self.assertTrue(all(name.startswith(('cloud/', 'backend/')) and name.endswith('.py') for name in names))
                 self.assertFalse(any('.data' in name or '.aws' in name or 'tests/' in name for name in names))
