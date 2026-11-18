@@ -88,6 +88,8 @@ terraform -chdir=infra/aws init -input=false -lockfile=readonly
 terraform -chdir=infra/aws plan -out=reviewed.tfplan
 ```
 
+Export the saved plan to ignored JSON and run the [offline minimal/idle plan checks](aws-plan-review.md). A PASS checks selected settings only; it is not deployment approval.
+
 Review the exact resource creation, permissions, target account, deletion protection, and notification settings. Only after that review, deploy the saved plan:
 
 ```sh

@@ -147,3 +147,5 @@ Opt-in [CloudTrail and protected audit archival](docs/cloud-audit.md) are prepar
 Optional [private S3 + CloudFront dashboard hosting](docs/dashboard-hosting.md) is prepared and tested offline. Provisioning and delivery default off. An isolated release tool builds AWS-only files under ignored `.data/` without changing the running local dashboard; publication requires a reviewed account/cost/deployment plan.
 
 [Offline IAM role-access preparation](docs/aws-role-access.md) now provides a minimal runtime boundary proposal, exact-role/service delegation fragment and optional Terraform boundary attachment. No account permissions are granted; full deployment permissions, costs and quotas still require review.
+
+Deployment preparation now includes [scoped service policy proposals](docs/aws-service-access.md) and [offline saved-plan checks](docs/aws-plan-review.md). They produce private review files without granting access, provisioning resources or changing the running local application.

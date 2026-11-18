@@ -15,7 +15,7 @@ Status reviewed November 18, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest implementation checks passed: 214 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 31 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 229 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 32 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## 1. Resolve deployment costs — first blocker
 
@@ -34,6 +34,7 @@ Exit: a documented cost decision that covers the complete proposed workload and 
 - [x] **Me:** Implement offline scoped minimal-stack service policy generation, exact resource-ID bindings, explicit missing-ID blockers, notification scope and managed-policy document packing. [Scope and bootstrap limitations](aws-service-access.md). No service access has been granted.
 - [ ] **Me + you:** Review administrator bootstrap for generated IDs/account-wide log delivery, actual bindings/ownership, all effective grants, approved boundary contents, provider/service acceptance and teardown access. Generated policy files alone do not make the account deployable; the current development policy remains inspection-only.
 - [ ] **You:** Review the exact permission changes before they are applied. Complete any password/MFA prompts directly in AWS.
+- [x] **Me:** Add offline checks for the full minimal/idle saved-plan JSON, including exact inventory, boundary/worker settings, data protection, encryption, auth/CORS and destructive-change rejection. [Scope and remaining manual review](aws-plan-review.md). This does not create or approve a real account plan.
 - [ ] **Me:** Rebuild deployment artifacts and prepare a saved Terraform plan with account, region, encryption, callbacks/CORS, worker switches, retention, resource counts, and cost settings reviewed.
 - [ ] **You:** Review the concrete deployment/cost plan before applying it.
 
