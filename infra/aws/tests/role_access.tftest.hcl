@@ -52,6 +52,16 @@ run "boundary_unset_preserves_existing_configuration" {
     error_message = "Existing plans must not silently attach or create a boundary."
   }
 }
+run "minimal_idle_plan_for_offline_review" {
+  command = plan
+  variables {
+    execution_permissions_boundary_arn = "arn:aws:iam::123456789012:policy/queuerescue-dev-execution-boundary"
+  }
+  assert {
+    condition     = var.cost_profile == "minimal" && !var.consumers_enabled && !var.replay_enabled && !var.audit_logging_enabled && !var.dashboard_hosting_enabled && alltrue([for role in aws_iam_role.function : role.permissions_boundary == var.execution_permissions_boundary_arn])
+    error_message = "The concrete offline-review plan must retain the minimal idle profile with the reviewed external boundary."
+  }
+}
 run "approved_boundary_covers_every_service_role" {
   command = plan
   variables {
