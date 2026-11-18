@@ -1,6 +1,6 @@
 # QueueRescue completion checklist
 
-Status reviewed November 16, 2026 against the original technical prototype and the current repository. Checked items mean the stated implementation or offline verification is complete; they do not imply a successful AWS deployment. The full visual design remains deferred as requested.
+Status reviewed November 18, 2026 against the original technical prototype and the current repository. Checked items mean the stated implementation or offline verification is complete; they do not imply a successful AWS deployment. The full visual design remains deferred as requested.
 
 ## Completed foundation
 
@@ -15,7 +15,7 @@ Status reviewed November 16, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest implementation checks passed: 196 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 31 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 214 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 31 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## 1. Resolve deployment costs — first blocker
 
@@ -31,7 +31,8 @@ Exit: a documented cost decision that covers the complete proposed workload and 
 
 - [ ] **Me:** Resolve active-demo Lambda concurrency requirements through a reviewed quota-compatible design or a quota increase. The last inspected regional quota does not fit the current active reservation settings. Do not request an increase automatically.
 - [x] **Me:** Prepare optional runtime-boundary attachment and an offline minimal-stack IAM role-delegation proposal with exact role/service scope and boundary protections. [Scope, verification and grant prerequisites](aws-role-access.md). No permissions have been granted.
-- [ ] **Me:** Complete scoped service-provisioning permissions and review all effective deployment grants, resource ownership, approved boundary contents and teardown access. The IAM fragment alone cannot deploy the stack; the current development policy remains inspection-only.
+- [x] **Me:** Implement offline scoped minimal-stack service policy generation, exact resource-ID bindings, explicit missing-ID blockers, notification scope and managed-policy document packing. [Scope and bootstrap limitations](aws-service-access.md). No service access has been granted.
+- [ ] **Me + you:** Review administrator bootstrap for generated IDs/account-wide log delivery, actual bindings/ownership, all effective grants, approved boundary contents, provider/service acceptance and teardown access. Generated policy files alone do not make the account deployable; the current development policy remains inspection-only.
 - [ ] **You:** Review the exact permission changes before they are applied. Complete any password/MFA prompts directly in AWS.
 - [ ] **Me:** Rebuild deployment artifacts and prepare a saved Terraform plan with account, region, encryption, callbacks/CORS, worker switches, retention, resource counts, and cost settings reviewed.
 - [ ] **You:** Review the concrete deployment/cost plan before applying it.

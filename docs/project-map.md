@@ -51,6 +51,7 @@ Arrows summarize verified imports, configured handlers and protocol flow; they a
 | `cloud/telemetry.py`, `cloud/log_evidence.py`, `cloud/reports.py`, `cloud/report_index.py`, `cloud/report_costs.py` | Sanitized correlation, bounded evidence lookup, report indexes/findings and separately labeled cost provenance. |
 | `infra/aws/hosting.tf`, `infra/aws/functions/dashboard-routing.js`, `tools/prepare_dashboard_release.mjs` | Optional private static origin/CDN, exact OAuth callback routing, and an isolated AWS-only release; hosting outputs feed Cognito callbacks and API CORS. |
 | `infra/aws/` | Prepared storage, IAM, encryption, worker switches, Cognito/API Gateway, orchestration, alarms/budget notices and mocked Terraform safety plans. |
+| `tools/aws_service_access.py` | Offline minimal service-policy proposals with exact account/region scopes, reviewed generated-ID bindings and explicit administrator bootstrap requirements; no grants. |
 | `tools/aws_role_access.py`, `infra/aws/compute.tf`, `infra/aws/audit.tf` | Offline minimal runtime boundary and IAM delegation proposal and optional external boundary attachment to every execution role; no grants or service-provisioning access. |
 | `tests/`, `tools/`, `.github/workflows/ci.yml` | Safety/HTTP/SDK fixture/frontend tests, packaging/readiness/configuration tools and reproducible offline validation. Tools that access real AWS remain subject to separate deployment authorization and cost review. |
 

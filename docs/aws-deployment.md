@@ -100,7 +100,7 @@ No CI job applies Terraform or holds AWS credentials. Confirm the SNS email subs
 
 ## Prepare bounded IAM delegation offline
 
-The [role-access preparation tool](aws-role-access.md) generates a private minimal-stack runtime ceiling and exact-role IAM delegation fragment without AWS calls. Terraform supports an administrator-owned `execution_permissions_boundary_arn` on every runtime role, default null. A separate reviewed administrator must establish the ceiling and verify existing roles before delegation; complete service-provisioning permissions, cost/quota checks and saved-plan review remain required. Generating files does not grant access or authorize deployment.
+The [role-access preparation tool](aws-role-access.md) generates a private minimal-stack runtime ceiling and exact-role IAM delegation fragment without AWS calls. Terraform supports an administrator-owned `execution_permissions_boundary_arn` on every runtime role, default null. A separate reviewed administrator must establish the ceiling and verify existing roles before delegation; complete service-provisioning permissions, cost/quota checks and saved-plan review remain required. Generating files does not grant access or authorize deployment. The [service policy generator](aws-service-access.md) adds exact named-resource scopes and reviewed-ID bindings; initial generated-ID resources and account-wide log delivery require a separately reviewed administrator bootstrap.
 
 ## Create separate operator and approver identities
 
