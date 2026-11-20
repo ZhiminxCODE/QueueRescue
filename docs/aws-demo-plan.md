@@ -1,12 +1,12 @@
 # Proposed paid AWS demonstration
 
-Prepared November 19, 2026. **For review only: no spending, quota request, permission grant, deployment or deletion is approved by this document.** The user requested a paid-demo proposal; the previous strict-$0 execution constraint remains until a specific paid tolerance is accepted. This is a readiness/workload proposal, not an actual saved Terraform plan.
+Prepared November 19, 2026. **The user accepted the $1 project tolerance and approved the quota request. Permission grants, actual deployment and deletion remain unapproved.** The accepted tolerance replaces the previous strict-$0 cost decision for this proposed single demo; it does not authorize applying infrastructure before review. This is a readiness/workload proposal, not an actual saved Terraform plan.
 
 ## Recommendation
 
 Use one minimal-profile sandbox in `us-east-1`, at most 25 synthetic messages and two separate application identities. Target three total resource-hours: one for setup, one for the active demonstration and one for cleanup. Resolve quota, access, notification and cleanup prerequisites before starting that clock. Do not provision resources while waiting for those prerequisites.
 
-Propose **$1 of project spending tolerance** for this single demonstration, subject to explicit acceptance that AWS does not enforce that amount as a cap. The gross model is approximately $0.06 illustrative / $0.20 with stressed runtimes for three hours. The margin is for planning; unexpected traffic, retries, setup failures or delayed cleanup can exceed it. This is not a prepaid deposit or permission to leave the stack running.
+The user accepted **$1 of project spending tolerance** for this single demonstration, acknowledging that AWS does not enforce that amount as a cap. The gross model is approximately $0.06 illustrative / $0.20 with stressed runtimes for three hours. The margin is for planning; unexpected traffic, retries, setup failures or delayed cleanup can exceed it. This is not a prepaid deposit or permission to leave the stack running.
 
 ## Current read-only findings
 
@@ -24,7 +24,7 @@ The refreshed private report is `.data/aws-readiness-current.json`, inspected No
 
 This narrow inspection is not a complete resource inventory or billing audit. It does not prove there are no unrelated resources or charges.
 
-## Proposed quota action — approval required
+## Approved quota request — submission denied
 
 Keep the existing consumer reservation of four and replay reservation of one. Request a regional **Concurrent executions quota of 105**, the minimum arithmetic requirement for this fresh base stack: five reserved plus AWS's required 100 unreserved. This does not mean the demo intends 105 concurrent invocations. Recheck actual unreserved capacity before activation, especially if other workloads appear.
 
@@ -32,7 +32,16 @@ Proposed request text:
 
 > Development-only QueueRescue shipment recovery sandbox in us-east-1. Request total concurrent executions of 105. Current quota is 10. The sandbox requires reserved concurrency 4 for one consumer shared by two SQS mappings, and 1 for bounded replay, leaving 100 unreserved. Initial workload is limited to 25 synthetic messages. Polling and replay remain disabled outside the reviewed demonstration. No provisioned concurrency is requested.
 
-AWS can decline or require a different request value. Do not silently change the requested target, attach broader permissions or remove concurrency controls if the request fails. The inspection-only identity may not be permitted to submit it; an authorized administrator may need to use Service Quotas. No request has been submitted.
+The user approved submission from 10 to 105. The exact reviewed non-root identity was rechecked; both quota discovery and a single explicit request returned `AccessDeniedException`. No quota request was accepted and no permissions changed. The attempt/result is retained privately in `.data/aws-quota-request-review.json`.
+
+An authorized administrator can complete the already-approved request without changing the developer's permissions:
+
+1. Open [Lambda Concurrent executions in us-east-1 Service Quotas](https://us-east-1.console.aws.amazon.com/servicequotas/home?region=us-east-1#!/services/lambda/quotas/L-B99A9384) in the intended account. Complete sign-in/MFA directly with AWS.
+2. Confirm service **AWS Lambda**, quota **Concurrent executions**, region **us-east-1** and current value **10**. Stop if the account, quota or value differs from the reviewed evidence.
+3. Select **Request increase at account level**, enter **105**, and submit. Use the request text above if AWS asks for justification. Keep the request ID/account details private; report its status.
+4. Wait for AWS's decision, then verify the applied value with a fresh readiness check before activating workers. A pending request is not an applied increase.
+
+The quota identifier is also listed in [AWS's quota reference](https://github.com/aws/tools-for-devops-agent/blob/main/skills/service-quota-check/references/common-quota-codes.md). AWS can decline or require a different request value. Do not silently change the target, attach broader permissions or remove concurrency controls if it fails. This handoff does not approve a plan upgrade or deploy resources.
 
 [AWS documents the 100-unit unreserved requirement, zero-concurrency stop control and no added charge for reserved concurrency](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html). Reserved concurrency differs from paid provisioned concurrency. [AWS's quota-request procedure](https://repost.aws/knowledge-center/lambda-concurrency-limit-increase) describes submitting and awaiting a decision through Service Quotas.
 
@@ -72,7 +81,7 @@ Begin cleanup by the end of the active hour and target complete removal within t
 
 ## Access, deployment and validation order
 
-1. Accept or revise this paid tolerance and quota proposal. Independently verify the account billing plan permits the required services. Any plan upgrade is a separate decision.
+1. The paid tolerance and quota submission are approved. Independently verify the account billing plan permits the required services. Any plan upgrade is a separate decision.
 2. Resolve the quota request and verify approved capacity through a fresh read. Do not create a waiting idle stack.
 3. Review the private [runtime boundary/delegation](aws-role-access.md) and [service policy bundle](aws-service-access.md). An administrator must review exact role ownership, policy contents, all effective grants and account-wide API log delivery. Initial API/pool/mapping IDs require a controlled bootstrap and later verified bindings. Do not invent IDs, create resources ad hoc, or attach AdministratorAccess to bypass errors.
 4. Establish reviewed application-user creation, bounded seeding and teardown permissions as well as provisioning access. The generated service bundle deliberately omits these. Agree on deletion of only this demo's synthetic resources/data after exporting masked results; actual destroy approval remains separate.
@@ -89,10 +98,10 @@ The intended retention choice is to retain curated masked results locally/GitHub
 
 The concrete review must cover all S3 versions/delete markers/multipart uploads, three tables, pool/users, queues, API, functions/mappings, workflow, logs, roles/policies and notification/budget resources. Verify names, ownership and Terraform state before deleting anything. Preserve unrelated resources and the existing local demo. Export evidence before disabling protection; never remove a boundary merely to bypass a permissions failure. See [retention and teardown](aws-deployment.md#retention-and-teardown).
 
-## Decisions still needed
+## Approval status and remaining reviews
 
-- Accept/revise the proposed $1 tolerance, understanding it is not an AWS cap.
-- Approve/decline submitting the regional concurrency request from 10 to 105.
+- Accepted: $1 project tolerance for this one demo, understanding it is not an AWS cap.
+- Approved: submitting the regional concurrency request from 10 to 105. The developer's submission was denied; administrator submission and AWS approval remain outstanding.
 - Review exact administrator bootstrap/grants and later the saved deployment and destroy plans. None has been approved or applied.
 
 Until those steps are resolved, continue offline preparation and leave AWS workers/resources undeployed. Account-specific policy documents, plan binaries/JSON, email addresses, IDs and runtime evidence stay in ignored files.

@@ -4,9 +4,9 @@ The optional CloudTrail/audit-archive profile is not included here. Optional das
 
 Reviewed November 15, 2026, for `us-east-1`, the current **minimal** Terraform profile and a locally hosted dashboard. This covers the base stack only. The now-prepared optional CloudFront hosting and audit infrastructure, and larger load tests, need new estimates. No resources were deployed to obtain prices.
 
-**Decision remains strict $0/local.** No paid tolerance, credit coverage, deployment or destructive cleanup is authorized by this worksheet. Personal account inspection results stay in ignored `.data/` files.
+**Cost decision: the user accepted a $1 project tolerance for one proposed paid demo, acknowledging that it is not an AWS spending cap.** This replaces the previous strict-$0 decision for that workload. Actual deployment, account plan upgrades, permission grants and destructive cleanup still require their concrete reviews. No credit coverage is assumed. Personal account inspection results stay in ignored `.data/` files.
 
-November 19 update: the user requested preparation of a paid-demo proposal. The [proposed workload, $1 tolerance, quota action and cleanup review](aws-demo-plan.md) are ready for review; that request alone does not authorize spending or deployment.
+November 19 update: the user accepted the [paid-demo workload/tolerance](aws-demo-plan.md) and approved the Lambda quota request. AWS denied submission through the inspection-only identity; an administrator handoff is documented. No infrastructure was deployed.
 
 ## Result
 
@@ -109,9 +109,9 @@ Even if all these cover this demo, HTTP API/S3 still need coverage or a nonzero 
 
 | Path | Decision / evidence needed |
 | --- | --- |
-| **Strict $0/local — recommended under the existing constraint** | Keep AWS undeployed; continue local simulator, mocked adapters and offline dashboard work. These local runs generate no AWS usage. |
+| Strict $0/local — previous decision | Keep AWS undeployed; continue local simulator, mocked adapters and offline dashboard work. These local runs generate no AWS usage. |
 | Verified credits / approved school lab | Verify available balance, expiry, service coverage and allowed services/IAM before reviewing deployment. Unverified future credits do not resolve the blocker. |
-| Paid demonstration | Requires explicit acceptance of nonzero charges and no hard cap. A proposed **$1 planning tolerance** gives margin over the three-hour model but is not enforced by AWS or already authorized. The seven-day scenario already exceeds it. Quotas, permissions and exact deployment/cleanup review remain. |
+| Paid demonstration — accepted cost path | The user accepted nonzero charges and a **$1 planning tolerance**, acknowledging it is not enforced by AWS. The seven-day scenario already exceeds it. Quotas, permissions and exact deployment/cleanup review remain; the accepted tolerance does not approve an apply. |
 
 ## Primary rate sources
 

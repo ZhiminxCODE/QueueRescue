@@ -28,11 +28,11 @@ This completes the local presentation milestone. It does not complete the real A
 
 ## 1. Resolve deployment costs — first blocker
 
-November 19: refreshed read-only account checks succeeded; the account-plan API remains unknown and Lambda concurrency remains 10. A [paid-demo proposal](aws-demo-plan.md) is prepared at the user's request. Its tolerance, quota request, grants, deployment and deletion are not yet approved.
+November 19: refreshed read-only account checks succeeded; the account-plan API remains unknown and Lambda concurrency remains 10. The user accepted the [paid-demo plan's](aws-demo-plan.md) $1 tolerance and approved quota submission from 10 to 105. AWS denied the submission through the inspection-only identity; an administrator handoff is documented. Grants, actual deployment and deletion remain unapproved.
 
 - [x] **Me:** Complete the 25-message, one-hour demo estimate across the current minimal stack, including setup/cleanup requests, retry allowances, notifications, network, storage and 7-/30-day retention. [Worksheet and offline calculator](aws-cost-assessment.md): $0.06345450 illustrative or $0.19955518 with stressed runtimes and three total resource-hours, before tax and without allowances/credits. These are scenarios, not a cap or measured AWS cost.
 - [ ] **Me + you:** Verify the applicable account/lab plan, credits, expiry, service coverage, shared allowances, and relevant lab restrictions. A missing Free Tier usage entry is not proof that a service is free.
-- [ ] **You:** Choose strict $0 with local/offline work, verified credits/lab coverage, or an explicitly reviewed nonzero spending tolerance. The existing strict $0 requirement remains active until changed.
+- [x] **You:** Accept the reviewed $1 nonzero spending tolerance for one bounded demo, understanding it is not an AWS cap. Exact deployment and cleanup approval remain separate.
 - [x] **Me:** Document proposed count/time/storage stop conditions and retention/teardown choices in the cost worksheet. Worker kill switches do not remove storage or table charges; actual deployment-specific deadlines and destructive cleanup still require review.
 - [ ] **Me + you:** Confirm notifications work and understand that they can arrive after additional usage. Do not describe an alert threshold as a hard cap.
 
@@ -41,6 +41,7 @@ Exit: a documented cost decision that covers the complete proposed workload and 
 ## 2. Make the account deployable
 
 - [ ] **Me:** Resolve active-demo Lambda concurrency requirements through a reviewed quota-compatible design or a quota increase. The last inspected regional quota does not fit the current active reservation settings. Do not request an increase automatically.
+  The user explicitly approved a request from 10 to 105; the attempted submission returned `AccessDeniedException`. An authorized administrator must submit it, then applied capacity must be rechecked.
 - [x] **Me:** Prepare optional runtime-boundary attachment and an offline minimal-stack IAM role-delegation proposal with exact role/service scope and boundary protections. [Scope, verification and grant prerequisites](aws-role-access.md). No permissions have been granted.
 - [x] **Me:** Implement offline scoped minimal-stack service policy generation, exact resource-ID bindings, explicit missing-ID blockers, notification scope and managed-policy document packing. [Scope and bootstrap limitations](aws-service-access.md). No service access has been granted.
 - [ ] **Me + you:** Review administrator bootstrap for generated IDs/account-wide log delivery, actual bindings/ownership, all effective grants, approved boundary contents, provider/service acceptance and teardown access. Generated policy files alone do not make the account deployable; the current development policy remains inspection-only.
@@ -100,7 +101,7 @@ FIFO-specific semantics, multiple accounts/regions, EventBridge recovery, ECS wo
 
 ## Your next inputs
 
-1. Cost path: strict $0, available credits/lab, or a reviewed paid-demo estimate. Do not send financial credentials.
+1. An authorized administrator submits the approved Lambda concurrency request using the [documented handoff](aws-demo-plan.md#approved-quota-request--submission-denied); the developer's attempt was denied. Verify the billing plan/service access before apply. The $1 cost tolerance is already accepted; do not send financial credentials.
 2. Operator and Approver test email addresses when the Cognito milestone is ready.
 3. Approval of concrete access/deployment/retention changes when presented, plus direct completion of authentication prompts.
 
