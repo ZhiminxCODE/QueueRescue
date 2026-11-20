@@ -23,6 +23,7 @@ Status reviewed November 18, 2026 against the original technical prototype and t
 - [x] Record the real local UI workflow through separate simulated approval, uncertain-send reconciliation, resume, business verification and audit inspection.
 - [x] Verify ten deliveries for ten distinct operations, ten verified attempts and retention of all 1,000 original snapshots.
 - [x] Publish the curated gallery/video, local architecture explanation and reproducible capture steps in the [demo showcase](demo-showcase.md).
+- [x] Prepare a [five-minute interview walkthrough](interview-walkthrough.md) with screen cues, evidence links, tradeoffs and practice questions. Timed personal rehearsal remains outstanding.
 
 This completes the local presentation milestone. It does not complete the real AWS demonstration, deployment/teardown rehearsal or cloud evidence requirements below.
 

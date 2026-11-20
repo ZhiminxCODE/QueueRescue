@@ -8,6 +8,8 @@ A working local implementation of the supplied technical prototype: investigate 
 
 [Watch or download the short walkthrough (MP4)](docs/media/queuerescue-local-demo.mp4) · [Five-screen gallery and architecture](docs/demo-showcase.md)
 
+For interviews, use the [five-minute talk track and practice questions](docs/interview-walkthrough.md).
+
 [![Verified local recovery: ten candidates completed with business proof](docs/media/05-verified-recovery.png)](docs/demo-showcase.md)
 
 The recording uses an isolated fixture: 1,000 original snapshots retained, ten selected operations and ten verified recoveries. The gallery explains the broader dry run and the narrower execution plan. Demo identities and evidence are simulated; real AWS deployment verification remains outstanding.
