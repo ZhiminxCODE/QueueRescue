@@ -6,6 +6,8 @@ Reviewed November 15, 2026, for `us-east-1`, the current **minimal** Terraform p
 
 **Decision remains strict $0/local.** No paid tolerance, credit coverage, deployment or destructive cleanup is authorized by this worksheet. Personal account inspection results stay in ignored `.data/` files.
 
+November 19 update: the user requested preparation of a paid-demo proposal. The [proposed workload, $1 tolerance, quota action and cleanup review](aws-demo-plan.md) are ready for review; that request alone does not authorize spending or deployment.
+
 ## Result
 
 These are **gross USD before tax**, with **no free allowances or credits deducted**. They are usage scenarios, not measured AWS performance, a quote, a worst-case bound or a spending cap.

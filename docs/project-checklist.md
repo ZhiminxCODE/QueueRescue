@@ -28,6 +28,8 @@ This completes the local presentation milestone. It does not complete the real A
 
 ## 1. Resolve deployment costs — first blocker
 
+November 19: refreshed read-only account checks succeeded; the account-plan API remains unknown and Lambda concurrency remains 10. A [paid-demo proposal](aws-demo-plan.md) is prepared at the user's request. Its tolerance, quota request, grants, deployment and deletion are not yet approved.
+
 - [x] **Me:** Complete the 25-message, one-hour demo estimate across the current minimal stack, including setup/cleanup requests, retry allowances, notifications, network, storage and 7-/30-day retention. [Worksheet and offline calculator](aws-cost-assessment.md): $0.06345450 illustrative or $0.19955518 with stressed runtimes and three total resource-hours, before tax and without allowances/credits. These are scenarios, not a cap or measured AWS cost.
 - [ ] **Me + you:** Verify the applicable account/lab plan, credits, expiry, service coverage, shared allowances, and relevant lab restrictions. A missing Free Tier usage entry is not proof that a service is free.
 - [ ] **You:** Choose strict $0 with local/offline work, verified credits/lab coverage, or an explicitly reviewed nonzero spending tolerance. The existing strict $0 requirement remains active until changed.

@@ -14,6 +14,8 @@ The recording uses an isolated fixture: 1,000 original snapshots retained, ten s
 
 See the [project completion checklist](docs/project-checklist.md) for verified progress, AWS deployment blockers, remaining features from the brief, and the later full-design phase.
 
+The [proposed paid AWS demo plan](docs/aws-demo-plan.md) covers the current readiness findings, workload, quota request, costs and cleanup decisions; it is awaiting review.
+
 For the cloud demo, see [AWS cost controls](docs/aws-cost-controls.md). Fresh Terraform configuration defaults to the minimal profile with consumers and replay off. This reduces fixed-cost features and preserves service-owned encryption, but Free Tier eligibility and credits must be checked in the account before deployment. Budget notifications are not a hard spending cap.
 
 **The default application runs locally in simulation.** It implements the recovery workflow with a React dashboard, Python API, SQLite ledger, and simulated idempotent shipment service. An explicit AWS dashboard mode now connects Cognito sign-in and the cloud recovery API; see [dashboard setup](docs/dashboard-aws.md). The AWS backend, browser integration, and Terraform are implemented and tested offline; the stack has not been deployed into the development account. See the [AWS architecture](docs/aws-architecture.md) and [deployment walkthrough](docs/aws-deployment.md). The local dashboard's demo identities are not AWS authentication.
