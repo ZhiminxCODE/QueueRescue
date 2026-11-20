@@ -17,6 +17,15 @@ Status reviewed November 18, 2026 against the original technical prototype and t
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
 - [x] Latest implementation checks passed: 229 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 32 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
+## Local GitHub showcase
+
+- [x] Capture five primary screenshots and an interruption-state image from an isolated synthetic fixture.
+- [x] Record the real local UI workflow through separate simulated approval, uncertain-send reconciliation, resume, business verification and audit inspection.
+- [x] Verify ten deliveries for ten distinct operations, ten verified attempts and retention of all 1,000 original snapshots.
+- [x] Publish the curated gallery/video, local architecture explanation and reproducible capture steps in the [demo showcase](demo-showcase.md).
+
+This completes the local presentation milestone. It does not complete the real AWS demonstration, deployment/teardown rehearsal or cloud evidence requirements below.
+
 ## 1. Resolve deployment costs — first blocker
 
 - [x] **Me:** Complete the 25-message, one-hour demo estimate across the current minimal stack, including setup/cleanup requests, retry allowances, notifications, network, storage and 7-/30-day retention. [Worksheet and offline calculator](aws-cost-assessment.md): $0.06345450 illustrative or $0.19955518 with stressed runtimes and three total resource-hours, before tax and without allowances/credits. These are scenarios, not a cap or measured AWS cost.

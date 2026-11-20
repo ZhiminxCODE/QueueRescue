@@ -2,6 +2,16 @@
 
 A working local implementation of the supplied technical prototype: investigate failed shipment events, create a selective recovery plan, obtain separate approval, replay at a bounded rate, and verify business outcomes.
 
+## Local demo showcase
+
+**Local simulation · synthetic data · no AWS deployment.** Investigate failures, preview exclusions, obtain separate approval, reconcile an interrupted send, and verify the business result.
+
+[Watch or download the short walkthrough (MP4)](docs/media/queuerescue-local-demo.mp4) · [Five-screen gallery and architecture](docs/demo-showcase.md)
+
+[![Verified local recovery: ten candidates completed with business proof](docs/media/05-verified-recovery.png)](docs/demo-showcase.md)
+
+The recording uses an isolated fixture: 1,000 original snapshots retained, ten selected operations and ten verified recoveries. The gallery explains the broader dry run and the narrower execution plan. Demo identities and evidence are simulated; real AWS deployment verification remains outstanding.
+
 See the [project completion checklist](docs/project-checklist.md) for verified progress, AWS deployment blockers, remaining features from the brief, and the later full-design phase.
 
 For the cloud demo, see [AWS cost controls](docs/aws-cost-controls.md). Fresh Terraform configuration defaults to the minimal profile with consumers and replay off. This reduces fixed-cost features and preserves service-owned encryption, but Free Tier eligibility and credits must be checked in the account before deployment. Budget notifications are not a hard spending cap.
