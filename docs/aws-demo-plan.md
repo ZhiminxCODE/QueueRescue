@@ -24,24 +24,29 @@ The refreshed private report is `.data/aws-readiness-current.json`, inspected No
 
 This narrow inspection is not a complete resource inventory or billing audit. It does not prove there are no unrelated resources or charges.
 
-## Approved quota request — submission denied
+## Approved quota request — submitted, pending
 
-Keep the existing consumer reservation of four and replay reservation of one. Request a regional **Concurrent executions quota of 105**, the minimum arithmetic requirement for this fresh base stack: five reserved plus AWS's required 100 unreserved. This does not mean the demo intends 105 concurrent invocations. Recheck actual unreserved capacity before activation, especially if other workloads appear.
+Keep the existing consumer reservation of four and replay reservation of one. The arithmetic requirement for this fresh base stack is 105: five reserved plus AWS's required 100 unreserved. However, on November 25 the AWS console rejected 105 because its request form requires at least the default quota of **1,000**. The user explicitly approved the revised target of 1,000 before submission. This raises the requested capacity ceiling; it does not reserve that capacity or activate workers.
 
-Proposed request text:
+Request status observed in the intended account's `us-east-1` console on November 25, 2026:
 
-> Development-only QueueRescue shipment recovery sandbox in us-east-1. Request total concurrent executions of 105. Current quota is 10. The sandbox requires reserved concurrency 4 for one consumer shared by two SQS mappings, and 1 for bounded replay, leaving 100 unreserved. Initial workload is limited to 25 synthetic messages. Polling and replay remain disabled outside the reviewed demonstration. No provisioned concurrency is requested.
+| Field | Observed value |
+| --- | --- |
+| Service / quota | AWS Lambda / Concurrent executions (`L-B99A9384`) |
+| Requested value | 1,000 |
+| Request status | Pending |
+| Applied value before submission | 10 |
+| Support case | None displayed yet |
 
-The user approved submission from 10 to 105. The exact reviewed non-root identity was rechecked; both quota discovery and a single explicit request returned `AccessDeniedException`. No quota request was accepted and no permissions changed. The attempt/result is retained privately in `.data/aws-quota-request-review.json`.
+The earlier developer CLI attempt returned `AccessDeniedException`; that history remains private in `.data/aws-quota-request-review.json`. The existing desktop console session could read the quota after refresh. Its request history was checked for duplicates, the approved 1,000 request was submitted, and the resulting history row showed **Pending**. No IAM policy was added or changed. The new observation is recorded privately in `.data/aws-quota-console-request.json`.
 
-An authorized administrator can complete the already-approved request without changing the developer's permissions:
+Follow-up:
 
-1. Open [Lambda Concurrent executions in us-east-1 Service Quotas](https://us-east-1.console.aws.amazon.com/servicequotas/home?region=us-east-1#!/services/lambda/quotas/L-B99A9384) in the intended account. Complete sign-in/MFA directly with AWS.
-2. Confirm service **AWS Lambda**, quota **Concurrent executions**, region **us-east-1** and current value **10**. Stop if the account, quota or value differs from the reviewed evidence.
-3. Select **Request increase at account level**, enter **105**, and submit. Use the request text above if AWS asks for justification. Keep the request ID/account details private; report its status.
-4. Wait for AWS's decision, then verify the applied value with a fresh readiness check before activating workers. A pending request is not an applied increase.
+1. Check [quota request history in us-east-1](https://us-east-1.console.aws.amazon.com/servicequotas/home/requests) for AWS's decision. Do not submit a duplicate while this request is pending.
+2. After approval, verify the actual applied quota and unreserved capacity through a fresh readiness check before activating workers. Pending or partial approval alone does not prove sufficient capacity.
+3. Continue reviewing scoped deployment/bootstrap and cleanup access while waiting, without granting permissions or provisioning a waiting idle stack.
 
-The quota identifier is also listed in [AWS's quota reference](https://github.com/aws/tools-for-devops-agent/blob/main/skills/service-quota-check/references/common-quota-codes.md). AWS can decline or require a different request value. Do not silently change the target, attach broader permissions or remove concurrency controls if it fails. This handoff does not approve a plan upgrade or deploy resources.
+The quota identifier is also listed in [AWS's quota reference](https://github.com/aws/tools-for-devops-agent/blob/main/skills/service-quota-check/references/common-quota-codes.md). AWS can decline or partially approve the request. Do not silently change the target, attach broader permissions or remove concurrency controls if it fails. This request does not approve a plan upgrade or deployment.
 
 [AWS documents the 100-unit unreserved requirement, zero-concurrency stop control and no added charge for reserved concurrency](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html). Reserved concurrency differs from paid provisioned concurrency. [AWS's quota-request procedure](https://repost.aws/knowledge-center/lambda-concurrency-limit-increase) describes submitting and awaiting a decision through Service Quotas.
 
@@ -101,7 +106,7 @@ The concrete review must cover all S3 versions/delete markers/multipart uploads,
 ## Approval status and remaining reviews
 
 - Accepted: $1 project tolerance for this one demo, understanding it is not an AWS cap.
-- Approved: submitting the regional concurrency request from 10 to 105. The developer's submission was denied; administrator submission and AWS approval remain outstanding.
+- Submitted with explicit user approval: regional concurrency target 1,000, after the console rejected 105 as below its minimum. Request history shows Pending; AWS approval and applied-capacity verification remain outstanding.
 - Review exact administrator bootstrap/grants and later the saved deployment and destroy plans. None has been approved or applied.
 
 Until those steps are resolved, continue offline preparation and leave AWS workers/resources undeployed. Account-specific policy documents, plan binaries/JSON, email addresses, IDs and runtime evidence stay in ignored files.

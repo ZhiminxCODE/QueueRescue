@@ -8,6 +8,8 @@ Reviewed November 15, 2026, for `us-east-1`, the current **minimal** Terraform p
 
 November 19 update: the user accepted the [paid-demo workload/tolerance](aws-demo-plan.md) and approved the Lambda quota request. AWS denied submission through the inspection-only identity; an administrator handoff is documented. No infrastructure was deployed.
 
+November 25 update: the user approved the console's minimum target of 1,000 after 105 was rejected. The request was submitted through the existing console session and shows Pending. No IAM permissions or infrastructure changed.
+
 ## Result
 
 These are **gross USD before tax**, with **no free allowances or credits deducted**. They are usage scenarios, not measured AWS performance, a quote, a worst-case bound or a spending cap.
