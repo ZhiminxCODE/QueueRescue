@@ -24,6 +24,8 @@ python3 -m tools.aws_role_access --account-id YOUR_ACCOUNT_ID \
 
 The command uses only Python's standard library, makes no AWS calls and writes `.data/aws-role-access.json` atomically with private permissions. It prints no account-specific values. The CLI has no apply, credential or permission-changing option. Keep account values, generated proposals and later effective-access evidence ignored; never commit them. The JSON bundle contains review metadata and two nested policy documents: it is **not** itself an attachable IAM policy. An authorized administrator must select and review each nested policy separately.
 
+For the current proposal, the delegation document exceeds IAM's 2,048-character aggregate user inline-policy limit. Review it as a customer-managed policy rather than pasting it into a user inline policy. Each customer-managed document must fit the 6,144-character limit; existing attachment counts and all effective grants still need inspection. See [IAM policy limits](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html).
+
 ## Requirements before any grant
 
 1. An authorized administrator reviews the proposed ceiling against `infra/aws/compute.tf`, exact resource ownership and the complete deployment plan, then creates the managed boundary outside the deployer's control. Confirm policy versions and the actual ARN. Do not grant a deployer permission to create, edit or delete its own ceiling.
