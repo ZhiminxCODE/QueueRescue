@@ -1,6 +1,6 @@
 # Proposed paid AWS demonstration
 
-Prepared November 19, 2026. **The user accepted the $1 project tolerance and approved the quota request. Permission grants, actual deployment and deletion remain unapproved.** The accepted tolerance replaces the previous strict-$0 cost decision for this proposed single demo; it does not authorize applying infrastructure before review. This is a readiness/workload proposal, not an actual saved Terraform plan.
+Prepared November 19, updated November 25, 2026. **The user accepted the $1 project tolerance, approved the quota request, and approved/applied the initial bounded IAM role-management grant. Service permission grants, actual deployment and deletion remain unapproved.** The accepted tolerance replaces the previous strict-$0 cost decision for this proposed single demo; it does not authorize applying infrastructure before review. This is a readiness/workload proposal, not an actual saved Terraform plan.
 
 ## Recommendation
 
@@ -23,6 +23,8 @@ The refreshed private report is `.data/aws-readiness-current.json`, inspected No
 | Deployment access | Existing reviewed access is for inspection; generated service bundle lacks API, pool and mapping bindings | An authorized administrator must review bootstrap, scoped grants and teardown access. No new effective-policy inventory or IAM simulation was performed by this check. |
 
 This narrow inspection is not a complete resource inventory or billing audit. It does not prove there are no unrelated resources or charges.
+
+The table above records the November 19 read-only baseline. On November 25, a separate live IAM review and explicit approval established the [initial exact-role management grant](aws-role-access.md). The developer is no longer inspection-only, but service provisioning and controlled bootstrap remain incomplete. Runtime roles are still absent and the new ceiling is not attached to the developer as an identity permission policy.
 
 ## Approved quota request — submitted, pending
 
@@ -107,6 +109,7 @@ The concrete review must cover all S3 versions/delete markers/multipart uploads,
 
 - Accepted: $1 project tolerance for this one demo, understanding it is not an AWS cap.
 - Submitted with explicit user approval: regional concurrency target 1,000, after the console rejected 105 as below its minimum. Request history shows Pending; AWS approval and applied-capacity verification remain outstanding.
-- Review exact administrator bootstrap/grants and later the saved deployment and destroy plans. None has been approved or applied.
+- Applied with explicit approval: create the administrator-owned runtime ceiling and exact-role delegation managed policies, and attach only the delegation policy directly to the developer. Console verification confirmed the new attachment. No runtime role or service resource was created.
+- Review the remaining service/bootstrap/user/seeding/cleanup grants and later the saved deployment and destroy plans. These remain unapproved and unapplied.
 
 Until those steps are resolved, continue offline preparation and leave AWS workers/resources undeployed. Account-specific policy documents, plan binaries/JSON, email addresses, IDs and runtime evidence stay in ignored files.
