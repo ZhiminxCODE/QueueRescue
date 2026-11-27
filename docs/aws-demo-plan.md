@@ -1,6 +1,6 @@
 # Proposed paid AWS demonstration
 
-Prepared November 19, updated November 25, 2026. **The user accepted the $1 project tolerance, approved the quota request, and approved/applied the initial bounded IAM role-management grant. Service permission grants, actual deployment and deletion remain unapproved.** The accepted tolerance replaces the previous strict-$0 cost decision for this proposed single demo; it does not authorize applying infrastructure before review. This is a readiness/workload proposal, not an actual saved Terraform plan.
+Prepared November 19, updated November 27, 2026. **The user accepted the $1 project tolerance, approved the quota request, and approved/applied the initial bounded IAM role-management grant. Service permission grants, actual deployment and deletion remain unapproved.** The accepted tolerance replaces the previous strict-$0 cost decision for this proposed single demo; it does not authorize applying infrastructure before review. This workload proposal accompanies a separately saved November 27 idle plan; neither is approved for apply.
 
 ## Recommendation
 
@@ -10,7 +10,7 @@ The user accepted **$1 of project spending tolerance** for this single demonstra
 
 ## Current read-only findings
 
-The refreshed private report is `.data/aws-readiness-current.json`, inspected November 19, 2026 Eastern time. Account identifiers and raw results remain ignored.
+The refreshed private report is `.data/aws-readiness-current.json`, refreshed November 27, 2026. Account identifiers and raw results remain ignored.
 
 | Check | Observed result | Consequence |
 | --- | --- | --- |
@@ -19,14 +19,14 @@ The refreshed private report is `.data/aws-readiness-current.json`, inspected No
 | Account plan | `ResourceNotFoundException` | Plan status/eligibility remain unknown. Verify service access and billing plan in the console before apply; do not upgrade automatically. |
 | Free Tier usage | Read succeeded; it does not establish complete cost coverage | Deduct no free allowances or credits from this proposal. |
 | Regional DynamoDB | Complete listing, no tables, zero provisioned RCU/WCU | Base stack adds 15 RCU + 15 WCU. Other regions/services and account-wide charges were not inventoried. |
-| Regional Lambda | No functions; total and unreserved concurrency both 10 | Current active worker reservations do not fit. |
-| Deployment access | Existing reviewed access is for inspection; generated service bundle lacks API, pool and mapping bindings | An authorized administrator must review bootstrap, scoped grants and teardown access. No new effective-policy inventory or IAM simulation was performed by this check. |
+| Regional Lambda | No functions; total and unreserved concurrency both 1,000 | Five active worker reservations fit; recheck before activation. |
+| Deployment access | Inspection and the approved exact-role management grant; generated service bundle lacks API, pool and mapping bindings | An authorized administrator must review bootstrap, scoped grants and teardown access. No new effective-policy inventory or IAM simulation was performed by this check. |
 
 This narrow inspection is not a complete resource inventory or billing audit. It does not prove there are no unrelated resources or charges.
 
-The table above records the November 19 read-only baseline. On November 25, a separate live IAM review and explicit approval established the [initial exact-role management grant](aws-role-access.md). The developer is no longer inspection-only, but service provisioning and controlled bootstrap remain incomplete. Runtime roles are still absent and the new ceiling is not attached to the developer as an identity permission policy.
+The table above records the November 27 read-only refresh. On November 25, a separate live IAM review and explicit approval established the [initial exact-role management grant](aws-role-access.md). The developer is no longer inspection-only, but service provisioning and controlled bootstrap remain incomplete. Runtime roles are still absent and the new ceiling is not attached to the developer as an identity permission policy.
 
-## Approved quota request — submitted, pending
+## Approved quota request — applied capacity verified
 
 Keep the existing consumer reservation of four and replay reservation of one. The arithmetic requirement for this fresh base stack is 105: five reserved plus AWS's required 100 unreserved. However, on November 25 the AWS console rejected 105 because its request form requires at least the default quota of **1,000**. The user explicitly approved the revised target of 1,000 before submission. This raises the requested capacity ceiling; it does not reserve that capacity or activate workers.
 
@@ -36,25 +36,20 @@ Request status observed in the intended account's `us-east-1` console on Novembe
 | --- | --- |
 | Service / quota | AWS Lambda / Concurrent executions (`L-B99A9384`) |
 | Requested value | 1,000 |
-| Request status | Pending |
+| Request status at submission | Pending on November 25 |
+| Applied capacity verified November 27 | 1,000 total; 1,000 unreserved |
 | Applied value before submission | 10 |
 | Support case | None displayed yet |
 
 The earlier developer CLI attempt returned `AccessDeniedException`; that history remains private in `.data/aws-quota-request-review.json`. The existing desktop console session could read the quota after refresh. Its request history was checked for duplicates, the approved 1,000 request was submitted, and the resulting history row showed **Pending**. No IAM policy was added or changed. The new observation is recorded privately in `.data/aws-quota-console-request.json`.
 
-Follow-up:
-
-1. Check [quota request history in us-east-1](https://us-east-1.console.aws.amazon.com/servicequotas/home/requests) for AWS's decision. Do not submit a duplicate while this request is pending.
-2. After approval, verify the actual applied quota and unreserved capacity through a fresh readiness check before activating workers. Pending or partial approval alone does not prove sufficient capacity.
-3. Continue reviewing scoped deployment/bootstrap and cleanup access while waiting, without granting permissions or provisioning a waiting idle stack.
-
-The quota identifier is also listed in [AWS's quota reference](https://github.com/aws/tools-for-devops-agent/blob/main/skills/service-quota-check/references/common-quota-codes.md). AWS can decline or partially approve the request. Do not silently change the target, attach broader permissions or remove concurrency controls if it fails. This request does not approve a plan upgrade or deployment.
+November 27: the refreshed developer session read the actual Lambda account settings: **1,000 total and 1,000 unreserved concurrency**, with no functions. The five reserved worker slots fit the current capacity. This verifies applied capacity rather than assuming the submitted request succeeded. The private current report is `.data/aws-readiness-current.json`. No duplicate request is needed. Recheck capacity before worker activation and continue reviewing scoped bootstrap/service and cleanup access. No plan upgrade or deployment is approved by this quota change.
 
 [AWS documents the 100-unit unreserved requirement, zero-concurrency stop control and no added charge for reserved concurrency](https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html). Reserved concurrency differs from paid provisioned concurrency. [AWS's quota-request procedure](https://repost.aws/knowledge-center/lambda-concurrency-limit-increase) describes submitting and awaiting a decision through Service Quotas.
 
 ## Resources and settings to review
 
-The minimal base stack contains five Lambda functions, six execution roles including the workflow role, four standard SQS queues, two initially disabled event mappings, three small provisioned DynamoDB tables, one private/versioned evidence bucket, Cognito pool/client/domain/groups, an HTTP API, one Standard state machine, six log groups and an SNS topic. Related policies/configuration are separate Terraform resources. The existing offline checker expects 62 managed resources without notification/budget resources, or 64 when the reviewed email enables both. These are source/fixture expectations, not an actual account plan count.
+The minimal base stack contains five Lambda functions, six execution roles including the workflow role, four standard SQS queues, two initially disabled event mappings, three small provisioned DynamoDB tables, one private/versioned evidence bucket, Cognito pool/client/domain/groups, an HTTP API, one Standard state machine, six log groups and an SNS topic. Related policies/configuration are separate Terraform resources. The existing offline checker expects 62 managed resources without notification/budget resources, or 64 when the reviewed email enables both. The November 27 real saved idle plan contains 64 creates, no updates and no deletions, matching the notification/budget configuration. It passes selected checks; full manual policy/cost review remains outstanding.
 
 | Setting | First apply | During approved demo | After demo |
 | --- | --- | --- | --- |
@@ -88,10 +83,10 @@ Begin cleanup by the end of the active hour and target complete removal within t
 
 ## Access, deployment and validation order
 
-November 27: [independent offline preparation](aws-plan-review.md) completed with deterministic Lambda packaging, all 229 Python/33 frontend tests and 32 mocked infrastructure plans passing. The private draft inputs use an isolated dashboard callback `http://localhost:8767/` and CLI callback `http://localhost:8765/callback`, keeping the current local dashboard settings unchanged. These callback/port choices still need concrete live-plan review and availability checks. The canonical state must remain in scope when preparing the real plan. The CLI session is expired; no new live account/quota finding or real saved plan is claimed.
+November 27: [preparation and real-plan checks](aws-plan-review.md) completed with deterministic Lambda packaging, 230 Python tests and 32 mocked infrastructure plans passing. The unchanged frontend last passed 33 tests. The real saved idle plan passes selected checks with 64 creates and no updates/deletions. Private inputs use dashboard callback `http://localhost:8767/` and CLI callback `http://localhost:8765/callback`, preserving current local dashboard settings. Callback ownership/port availability still need review. Canonical state was kept in scope; no apply occurred. Live identity and quota are verified, while billing-plan eligibility and service/bootstrap grants remain unresolved.
 
 1. The paid tolerance and quota submission are approved. Independently verify the account billing plan permits the required services. Any plan upgrade is a separate decision.
-2. Resolve the quota request and verify approved capacity through a fresh read. Do not create a waiting idle stack.
+2. Applied capacity is verified at 1,000. Recheck before enabling workers; do not create a waiting idle stack.
 3. Review the private [runtime boundary/delegation](aws-role-access.md) and [service policy bundle](aws-service-access.md). An administrator must review exact role ownership, policy contents, all effective grants and account-wide API log delivery. Initial API/pool/mapping IDs require a controlled bootstrap and later verified bindings. Do not invent IDs, create resources ad hoc, or attach AdministratorAccess to bypass errors.
 4. Establish reviewed application-user creation, bounded seeding and teardown permissions as well as provisioning access. The generated service bundle deliberately omits these. Agree on deletion of only this demo's synthetic resources/data after exporting masked results; actual destroy approval remains separate.
 5. Confirm the private notification endpoint and distinct Operator/Approver accounts. Verify delivery when provisioned; keep workers disabled until it works. The first apply can itself incur charges, so its concrete review must include this setup exposure.
@@ -110,7 +105,7 @@ The concrete review must cover all S3 versions/delete markers/multipart uploads,
 ## Approval status and remaining reviews
 
 - Accepted: $1 project tolerance for this one demo, understanding it is not an AWS cap.
-- Submitted with explicit user approval: regional concurrency target 1,000, after the console rejected 105 as below its minimum. Request history shows Pending; AWS approval and applied-capacity verification remain outstanding.
+- Submitted with explicit user approval: regional concurrency target 1,000, after the console rejected 105 as below its minimum. Applied total and unreserved capacity were both verified at 1,000 on November 27.
 - Applied with explicit approval: create the administrator-owned runtime ceiling and exact-role delegation managed policies, and attach only the delegation policy directly to the developer. Console verification confirmed the new attachment. No runtime role or service resource was created.
 - Review the remaining service/bootstrap/user/seeding/cleanup grants and later the saved deployment and destroy plans. These remain unapproved and unapplied.
 

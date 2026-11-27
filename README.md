@@ -14,7 +14,7 @@ The recording uses an isolated fixture: 1,000 original snapshots retained, ten s
 
 See the [project completion checklist](docs/project-checklist.md) for verified progress, AWS deployment blockers, remaining features from the brief, and the later full-design phase.
 
-The [paid AWS demo plan](docs/aws-demo-plan.md) records the accepted $1 tolerance and remaining access/deployment reviews. The user-approved Lambda concurrency request for 1,000 was submitted through the console and is pending AWS's decision; deployment remains unapproved.
+The [paid AWS demo plan](docs/aws-demo-plan.md) records the accepted $1 tolerance and remaining access/deployment reviews. Live checks verified Lambda concurrency of 1,000. A real saved idle plan proposes 64 creates and passes [selected safety checks](docs/aws-plan-review.md); service/bootstrap permissions and deployment review remain outstanding. No infrastructure has been applied.
 
 For the cloud demo, see [AWS cost controls](docs/aws-cost-controls.md). Fresh Terraform configuration defaults to the minimal profile with consumers and replay off. This reduces fixed-cost features and preserves service-owned encryption, but Free Tier eligibility and credits must be checked in the account before deployment. Budget notifications are not a hard spending cap.
 

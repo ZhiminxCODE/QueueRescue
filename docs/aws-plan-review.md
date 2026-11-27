@@ -1,10 +1,14 @@
 # Offline review of a saved AWS plan
 
-Status: implemented and tested offline. No real-account plan has been generated or approved by this work. The checker reads existing Terraform plan JSON and never invokes AWS, Terraform, grant operations or apply.
+Status: the checker is implemented and tested, and a real-account minimal/idle saved plan was prepared on November 27, 2026. Its selected checks pass: **64 creates, no updates and no deletions**. Deployment remains unapproved. The checker itself reads existing Terraform plan JSON and never invokes AWS, Terraform, grants or apply.
 
-November 27 preparation: a fresh ignored `.data/aws-plan-review-*` folder now contains two byte-identical pinned Lambda builds, package/source hashes, private minimal/idle inputs, an isolated Terraform source copy and verification logs. All 229 Python tests, 33 frontend tests, Terraform formatting/validation and 32 mocked plans passed. Provider validation required local plugin communication outside the restricted execution environment; the successful tests used the mocked provider, not live AWS. Existing `dist/`, `.env`, `.env.local` and ignored Terraform values matched their pre-run hashes.
+The renewed session matched the intended non-root identity. A fresh readiness check verified regional Lambda concurrency and unreserved capacity of 1,000 each. Account-plan eligibility remains unknown (`ResourceNotFoundException`); service/bootstrap access and the manual deployment review remain incomplete.
 
-The private locator is `.data/aws-plan-review-latest.json`; it identifies `verification.json` and `next-plan-commands.json`. The latter records exact future read-only plan/export/check arguments, with no apply command. Use the canonical `infra/aws` directory for the real plan so any existing state remains in scope; the isolated copy is for offline validation only. Recheck source/artifact hashes and the actual state before planning. The live session check returned `ExpiredLoginSession`, so no real account plan or current quota result was obtained. No grants, application infrastructure, worker activation or deletion were performed during this preparation.
+The first real plan exposed unknown TTL settings on business and audit tables. Terraform now explicitly disables TTL on those tables and enables `expires_at` only for the ledger. The [provider documents](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/dynamodb_table.html) that a TTL attribute is required only when enabled. The checker accepts a known disabled block and still rejects unknown or enabled TTL for business/audit records. The first failed plan is preserved as superseded; only the revised binary corresponds to the passing report.
+
+Verification passed: 230 Python tests, including 16 plan-checker tests, Terraform formatting/validation and 32 mocked plans. The unchanged frontend last passed 33 tests and an isolated hosting build. Two pinned Lambda packages were byte-identical. Existing `dist/`, `.env`, `.env.local` and ignored Terraform values matched their pre-run hashes. No application process was restarted.
+
+The ignored private locator `.data/aws-plan-review-latest.json` identifies the review directory. It contains `reviewed-ttl-fixed.tfplan`, its exported JSON, `selected-plan-checks.json`, `real-plan-manifest.json` with binary/JSON/package/source hashes, and `review-summary.json`. Historical offline verification remains separate. `next-plan-commands.json` identifies the passing artifacts and records preparation commands without an apply command. The real plan used canonical `infra/aws`; the isolated source copy was used only for offline validation. No grants, application infrastructure, worker activation or deletion occurred during this preparation.
 
 ## Supported plan
 
@@ -18,7 +22,7 @@ The base profile excludes KMS, optional audit/archive, CloudFront hosting and ad
 
 ## Use locally after separate plan preparation
 
-First resolve the account, cost, quota and permission prerequisites in the [deployment runbook](aws-deployment.md). Preparing a real plan can read AWS and is a separate step; no real plan was prepared during implementation of this tool.
+First resolve the account, cost, quota and permission prerequisites in the [deployment runbook](aws-deployment.md). Preparing a real plan can read AWS and is a separate step. The November 27 saved plan above is available for review; it does not establish provisioning access or approval.
 
 After a concrete saved plan has been prepared through that reviewed process, export its JSON to ignored private storage:
 
@@ -39,7 +43,7 @@ The tool prints only PASS/FAIL and issue codes, atomically saves `.data/aws-plan
 
 ## Verification and compatibility
 
-Fifteen Python tests cover target/profile mismatches, strict booleans, missing/changed boundaries, active worker values hidden behind idle variables, destructive changes, drift/imports, missing/duplicate/extra resources, storage protection/encryption, authentication/CORS, unknown/malformed settings, notifications, CLI behavior and exact-byte hashing. The test fixture is authored synthetic data, not a saved account plan or runtime evidence.
+Sixteen Python tests cover target/profile mismatches, strict booleans, missing/changed boundaries, active worker values hidden behind idle variables, destructive changes, drift/imports, missing/duplicate/extra resources, storage protection/encryption, authentication/CORS, unknown/malformed settings, notifications, CLI behavior and exact-byte hashing. The test fixture is authored synthetic data, not a saved account plan or runtime evidence.
 
 The checks were also exercised against the 62 actual resource-change entries emitted by the provider's mocked minimal/idle Terraform test with a configured boundary. Terraform's test renderer omits root variables, so that integration used an explicitly authored matching synthetic variable header. This checks resource-shape compatibility; it is not an actual account plan or a live deployment. All mocked Terraform safety plans and the full Python regressions are run for delivery. No remote CI result is claimed here.
 

@@ -116,6 +116,20 @@ class PlanReviewTests(unittest.TestCase):
             plan=base_plan();resource(plan,address)['change']['after'][key]=value;self.assert_rejected(plan,code)
         plan=base_plan();plan['variables']['callback_urls']['value']=['http://external.example/'];self.assert_rejected(plan,'CALLBACK_URLS')
 
+    def test_business_and_audit_ttl_accept_known_disabled_and_reject_unknown(self):
+        plan=base_plan()
+        for name in ['audit','business']:
+            resource(plan,f'aws_dynamodb_table.data["{name}"]')['change']['after']['ttl']=[{'enabled':False,'attribute_name':None}]
+        self.assertTrue(self.check(plan)['checks_passed'])
+        for name in ['audit','business']:
+            for ttl in [None,[{'enabled':None}],[{'enabled':0}],[{'enabled':True,'attribute_name':'expires_at'}],[{'enabled':False},{'enabled':True}],{}]:
+                with self.subTest(table=name,ttl=ttl):
+                    invalid=copy.deepcopy(plan)
+                    table=resource(invalid,f'aws_dynamodb_table.data["{name}"]')['change']
+                    table['after']['ttl']=ttl
+                    table['after_unknown']={'ttl':True} if ttl is None else {}
+                    self.assert_rejected(invalid,'TABLE_TTL')
+
     def test_wrong_names_unknown_settings_and_unexpected_log_retention(self):
         plan=base_plan();resource(plan,'aws_sns_topic.alerts')['change']['after']['name']='unrelated';self.assert_rejected(plan,'RESOURCE_NAME')
         plan=base_plan();resource(plan,'aws_cloudwatch_log_group.api')['change']['after']['retention_in_days']=30;self.assert_rejected(plan,'LOG_PROFILE')

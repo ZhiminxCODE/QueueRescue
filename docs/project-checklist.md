@@ -15,7 +15,7 @@ Status reviewed November 18, 2026 against the original technical prototype and t
 - [x] AWS browser workflow checked with offline HTTP fixtures, including ambiguous response recovery and Viewer restrictions.
 - [x] Non-root development identity, MFA, temporary CLI sign-in, and a limited account-inspection policy verified.
 - [x] Fresh Terraform defaults use minimal mode with consumers/replay off. A one-cent budget warning is configurable; it is not a spending cap.
-- [x] Latest implementation checks passed: 229 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 32 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
+- [x] Latest implementation checks passed: 230 Python tests, 33 frontend tests including an isolated hosting release build, deterministic Lambda packaging, Terraform validation and 32 mocked Terraform plans. CI is configured; this is not a claim about an uninspected remote CI run.
 
 ## Local GitHub showcase
 
@@ -42,16 +42,15 @@ Exit: a documented cost decision that covers the complete proposed workload and 
 
 ## 2. Make the account deployable
 
-- [ ] **Me:** Resolve active-demo Lambda concurrency requirements through a reviewed quota-compatible design or a quota increase. The last inspected regional quota does not fit the current active reservation settings. Do not request an increase automatically.
-  The user-approved revised target of 1,000 was submitted through the console on November 25; status is Pending. Recheck the applied value and unreserved capacity after AWS's decision.
+- [x] **Me:** Verify sufficient active-demo Lambda capacity after the approved increase. November 27 live inspection reports 1,000 total and 1,000 unreserved; the five reserved worker slots fit while preserving AWS's 100-unit unreserved requirement. Recheck before activation.
 - [x] **Me:** Prepare optional runtime-boundary attachment and an offline minimal-stack IAM role-delegation proposal with exact role/service scope and boundary protections. [Scope, verification and grant prerequisites](aws-role-access.md). Its separately approved initial grant is recorded below.
 - [x] **Me + you:** Apply the separately approved initial IAM changes: create the runtime-ceiling and role-delegation managed policies, attach only the role-delegation policy directly to `queuerescue-dev`, and verify the console's success and four-policy inventory. No service policy, execution role or deployment was applied; bootstrap/service access remains incomplete.
 - [x] **Me:** Implement offline scoped minimal-stack service policy generation, exact resource-ID bindings, explicit missing-ID blockers, notification scope and managed-policy document packing. [Scope and bootstrap limitations](aws-service-access.md). No service access has been granted.
 - [ ] **Me + you:** Review administrator bootstrap for generated IDs/account-wide log delivery, actual bindings/ownership, all effective grants, approved boundary contents, provider/service acceptance and teardown access. The developer now has the approved exact-role management grant, but service provisioning/bootstrap, application users, seeding and teardown access remain incomplete.
 - [ ] **You:** Review the exact permission changes before they are applied. Complete any password/MFA prompts directly in AWS.
 - [x] **Me:** Add offline checks for the full minimal/idle saved-plan JSON, including exact inventory, boundary/worker settings, data protection, encryption, auth/CORS and destructive-change rejection. [Scope and remaining manual review](aws-plan-review.md). This does not create or approve a real account plan.
-- [ ] **Me:** Rebuild deployment artifacts and prepare a saved Terraform plan with account, region, encryption, callbacks/CORS, worker switches, retention, resource counts, and cost settings reviewed.
-  November 27: independent preparation is complete: two identical pinned Lambda packages, source/package hashes, private idle-plan inputs, 229 Python tests, 33 frontend tests, Terraform validation and 32 mocked plans. Protected application/build/settings files are unchanged. The real saved plan remains outstanding because the developer CLI session is expired; offline/mock results do not satisfy it. See [plan preparation status](aws-plan-review.md).
+- [x] **Me:** Rebuild deterministic deployment artifacts and prepare a real saved minimal/idle Terraform plan with source/package/plan hashes and selected safety checks.
+  November 27: the revised real plan passes selected checks and proposes 64 creates, no updates and no deletions. Consumers/replay and optional features remain off; business/audit TTL is explicitly disabled. All 230 Python tests and 32 mocked plans passed; the unchanged frontend last passed 33 tests. Application/build/settings hashes are unchanged. Manual policy/bootstrap, billing, notification, callback ownership and cleanup review remain outstanding. See [plan preparation status](aws-plan-review.md).
 - [ ] **You:** Review the concrete deployment/cost plan before applying it.
 
 Exit: correct non-root identity, sufficient quotas, reviewed permissions and a reviewed saved plan. No permanent/root access keys are needed.
@@ -105,7 +104,7 @@ FIFO-specific semantics, multiple accounts/regions, EventBridge recovery, ECS wo
 
 ## Your next inputs
 
-1. Check the [pending quota request](aws-demo-plan.md#approved-quota-request--submitted-pending) when AWS responds; do not submit a duplicate. Verify the billing plan/service access before apply. The $1 cost tolerance is already accepted; do not send financial credentials.
+1. Verify the billing plan/service access before apply. The [quota increase is verified](aws-demo-plan.md#approved-quota-request--applied-capacity-verified); recheck capacity before enabling workers. The $1 cost tolerance is already accepted; do not send financial credentials.
 2. Operator and Approver test email addresses when the Cognito milestone is ready.
 3. Approval of concrete access/deployment/retention changes when presented, plus direct completion of authentication prompts.
 

@@ -57,12 +57,9 @@ resource "aws_dynamodb_table" "data" {
     }
   }
   # Business and audit records must never disappear through evidence TTL.
-  dynamic "ttl" {
-    for_each = each.key == "ledger" ? [1] : []
-    content {
-      attribute_name = "expires_at"
-      enabled        = true
-    }
+  ttl {
+    attribute_name = each.key == "ledger" ? "expires_at" : null
+    enabled        = each.key == "ledger"
   }
 }
 

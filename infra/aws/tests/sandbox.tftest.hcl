@@ -101,7 +101,7 @@ run "safe_sandbox_plan" {
     error_message = "Evidence and ledger destruction must be opt-in."
   }
   assert {
-    condition     = length(aws_dynamodb_table.data["audit"].ttl) == 0 && length(aws_dynamodb_table.data["business"].ttl) == 0
+    condition     = alltrue([for name in ["audit", "business"] : length(aws_dynamodb_table.data[name].ttl) == 1 && aws_dynamodb_table.data[name].ttl[0].enabled == false])
     error_message = "Business idempotency and audit records must not inherit snapshot TTL."
   }
   assert {

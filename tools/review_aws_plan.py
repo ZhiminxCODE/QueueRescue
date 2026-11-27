@@ -141,7 +141,7 @@ def review_plan(plan, account_id, region, environment):
         name(address, 'name', prefix + '-' + n)
         check(address, 'TABLE_PROFILE', lambda v: v['billing_mode'] == 'PROVISIONED' and v['read_capacity'] == 5 and v['write_capacity'] == 5 and v['deletion_protection_enabled'] is True and v['stream_enabled'] is False and v['point_in_time_recovery'][0]['enabled'] is False)
         if n != 'ledger':
-            check(address, 'TABLE_TTL', lambda v: v['ttl'] == [])
+            check(address, 'TABLE_TTL', lambda v: v['ttl'] == [] or (isinstance(v['ttl'], list) and len(v['ttl']) == 1 and v['ttl'][0]['enabled'] is False))
         else:
             check(address, 'TABLE_TTL', lambda v: v['ttl'][0]['enabled'] is True and v['ttl'][0]['attribute_name'] == 'expires_at')
     check('aws_s3_bucket.evidence', 'EVIDENCE_BUCKET', lambda v: v['bucket'] == f'{prefix}-{account_id}-{region}-evidence' and v['force_destroy'] is False)
