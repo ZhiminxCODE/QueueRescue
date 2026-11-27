@@ -51,6 +51,7 @@ Exit: a documented cost decision that covers the complete proposed workload and 
 - [ ] **You:** Review the exact permission changes before they are applied. Complete any password/MFA prompts directly in AWS.
 - [x] **Me:** Add offline checks for the full minimal/idle saved-plan JSON, including exact inventory, boundary/worker settings, data protection, encryption, auth/CORS and destructive-change rejection. [Scope and remaining manual review](aws-plan-review.md). This does not create or approve a real account plan.
 - [ ] **Me:** Rebuild deployment artifacts and prepare a saved Terraform plan with account, region, encryption, callbacks/CORS, worker switches, retention, resource counts, and cost settings reviewed.
+  November 27: independent preparation is complete: two identical pinned Lambda packages, source/package hashes, private idle-plan inputs, 229 Python tests, 33 frontend tests, Terraform validation and 32 mocked plans. Protected application/build/settings files are unchanged. The real saved plan remains outstanding because the developer CLI session is expired; offline/mock results do not satisfy it. See [plan preparation status](aws-plan-review.md).
 - [ ] **You:** Review the concrete deployment/cost plan before applying it.
 
 Exit: correct non-root identity, sufficient quotas, reviewed permissions and a reviewed saved plan. No permanent/root access keys are needed.

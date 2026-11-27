@@ -2,6 +2,10 @@
 
 Status: implemented and tested offline. No real-account plan has been generated or approved by this work. The checker reads existing Terraform plan JSON and never invokes AWS, Terraform, grant operations or apply.
 
+November 27 preparation: a fresh ignored `.data/aws-plan-review-*` folder now contains two byte-identical pinned Lambda builds, package/source hashes, private minimal/idle inputs, an isolated Terraform source copy and verification logs. All 229 Python tests, 33 frontend tests, Terraform formatting/validation and 32 mocked plans passed. Provider validation required local plugin communication outside the restricted execution environment; the successful tests used the mocked provider, not live AWS. Existing `dist/`, `.env`, `.env.local` and ignored Terraform values matched their pre-run hashes.
+
+The private locator is `.data/aws-plan-review-latest.json`; it identifies `verification.json` and `next-plan-commands.json`. The latter records exact future read-only plan/export/check arguments, with no apply command. Use the canonical `infra/aws` directory for the real plan so any existing state remains in scope; the isolated copy is for offline validation only. Recheck source/artifact hashes and the actual state before planning. The live session check returned `ExpiredLoginSession`, so no real account plan or current quota result was obtained. No grants, application infrastructure, worker activation or deletion were performed during this preparation.
+
 ## Supported plan
 
 `tools/review_aws_plan.py` checks selected invariants in a **full minimal base plan with workers idle**, using Terraform's version-1 [JSON plan representation](https://developer.hashicorp.com/terraform/internals/json-format#plan-representation). It expects the repository's 62 base resources, or 64 when the email subscription and budget are configured. It rejects partial/targeted inventories, extra resources, alternate providers, imports/moves, drift, deferred/incomplete plans, deletions, replacements and unsupported change actions. Creates, non-destructive updates and no-op entries are supported.

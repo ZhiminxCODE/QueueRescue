@@ -88,6 +88,8 @@ Begin cleanup by the end of the active hour and target complete removal within t
 
 ## Access, deployment and validation order
 
+November 27: [independent offline preparation](aws-plan-review.md) completed with deterministic Lambda packaging, all 229 Python/33 frontend tests and 32 mocked infrastructure plans passing. The private draft inputs use an isolated dashboard callback `http://localhost:8767/` and CLI callback `http://localhost:8765/callback`, keeping the current local dashboard settings unchanged. These callback/port choices still need concrete live-plan review and availability checks. The canonical state must remain in scope when preparing the real plan. The CLI session is expired; no new live account/quota finding or real saved plan is claimed.
+
 1. The paid tolerance and quota submission are approved. Independently verify the account billing plan permits the required services. Any plan upgrade is a separate decision.
 2. Resolve the quota request and verify approved capacity through a fresh read. Do not create a waiting idle stack.
 3. Review the private [runtime boundary/delegation](aws-role-access.md) and [service policy bundle](aws-service-access.md). An administrator must review exact role ownership, policy contents, all effective grants and account-wide API log delivery. Initial API/pool/mapping IDs require a controlled bootstrap and later verified bindings. Do not invent IDs, create resources ad hoc, or attach AdministratorAccess to bypass errors.
